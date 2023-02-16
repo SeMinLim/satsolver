@@ -1,1 +1,1 @@
-# satsolver
+# SAT Solver

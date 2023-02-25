@@ -1,7 +1,7 @@
 # SAT Solver
 
 - Conflict-Driven Clause Learning
--- First UIP(Unit Implication Point) Clause Learning [Based on Chaff]
+  - First UIP(Unit Implication Point) Clause Learning [Based on Chaff]
 -- Phase Saving
 - Lazy Data Structure
 -- The Watched Literal [Based on Chaff]

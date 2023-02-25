@@ -2,8 +2,8 @@
 #include <fstream>
 #include <time.h>
 
-#define Value(literal) (literal > 0 ? value[literal] : -value[-literal]) // Get the value of a literal
-#define WatchPointer(id) (watchedPointers[vars + id]) // Remapping a literal [-maxvar, +maxvar] to its watcher.
+#define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
+#define WatchPointer(id) (watchedPointers[vars + id])
 
 
 // Elapsed time checker
@@ -46,11 +46,11 @@ char *read_int( char *p, int *i ) {
 
 // Functions for Solver
 int Solver::add_clause( std::vector<int> &c ) {                   
-    	clause_DB.push_back(Clause(c.size()));                          // Add a clause c into database.
-    	int id = clause_DB.size() - 1;                                  // Getting clause index.
-    	for ( int i = 0; i < (int)c.size(); i++ ) clause_DB[id][i] = c[i];     // Copy literals
-    	WatchPointer(-c[0]).push_back(WL(id, c[1]));                      // Watch this clause by literal -c[0]
-    	WatchPointer(-c[1]).push_back(WL(id, c[0]));                      // Watch this clause by literal -c[1]
+    	clause_DB.push_back(Clause(c.size()));                          
+    	int id = clause_DB.size() - 1;                                
+    	for ( int i = 0; i < (int)c.size(); i++ ) clause_DB[id][i] = c[i]; 
+    	WatchPointer(-c[0]).push_back(WL(id, c[1]));                      
+    	WatchPointer(-c[1]).push_back(WL(id, c[0]));                    
     	return id;                                                      
 }
 
@@ -263,7 +263,7 @@ void Solver::backtrack( int backtrackLevel ) {
         	int v = abs(trail[i]);
         	value[v] = 0;
 		saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
-        	if (!vsids.inHeap(v)) vsids.insert(v);          // Update heap
+        	if (!vsids.inHeap(v)) vsids.insert(v); // Update heap
     	}
     	propagated = pos_in_trail[backtrackLevel];
     	trail.resize(propagated);
@@ -272,12 +272,12 @@ void Solver::backtrack( int backtrackLevel ) {
 
 int Solver::decide() {      
     	int next = -1;
-    	while ( next == -1 || Value(next) != 0 ) {    // Picking a variable according to VSIDS
+    	while ( next == -1 || Value(next) != 0 ) {
         	if (vsids.empty()) return 10;
         	else next = vsids.pop();
-    	}
+    	} // Picking a variable according to VSIDS
     	pos_in_trail.push_back(trail.size());
-    	if ( saved[next] ) next *= saved[next];       // Pick the polarity of the varible
+    	if ( saved[next] ) next *= saved[next]; // Pick the polarity of the varible
     	assign(next, pos_in_trail.size(), -1);
     	return 0;
 }
@@ -285,7 +285,7 @@ int Solver::decide() {
 void Solver::restart() {
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = 0;
     	backtrack(0);
-    	int phase_rand = rand() % 100;              // probabilistic rephasing
+    	int phase_rand = rand() % 100;
     	if ((phase_rand -= 60) < 0) for (int i = 1; i <= vars; i++) saved[i] = local_best[i];
     	else if ((phase_rand -= 5) < 0) for (int i = 1; i <= vars; i++) saved[i] = -local_best[i];
     	else if ((phase_rand -= 20) < 0) for (int i = 1; i <= vars; i++) saved[i] = rand() % 2 ? 1 : -1;
@@ -302,15 +302,17 @@ void Solver::reduce() {
     	int new_size = origin_clauses;
 	int old_size = clause_DB.size();
     	reduce_map.resize(old_size);
-    	for ( int i = origin_clauses; i < old_size; i++ ) {    // random delete 50% bad clauses (LBD>=5)
-        	if ( clause_DB[i].lbd >= 5 && rand() % 2 == 0 ) reduce_map[i] = -1;  // remove clause
+	// Random delete 50% bad clauses (LBD>=5) 
+	// Reducing based on Literal Block Distances
+    	for ( int i = origin_clauses; i < old_size; i++ ) { 
+        	if ( clause_DB[i].lbd >= 5 && rand() % 2 == 0 ) reduce_map[i] = -1; // remove clause
         	else {
             		if ( new_size != i ) clause_DB[new_size] = clause_DB[i];
             		reduce_map[i] = new_size++;
         	}
     	}
     	clause_DB.resize(new_size, Clause(0));
-    	for ( int v = -vars; v <= vars; v++ ) {   // Update the watches.
+    	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
         	int old_sz = WatchPointer(v).size();
 		int new_sz = 0;
@@ -331,21 +333,24 @@ void Solver::reduce() {
 int Solver::solve() {
     	int res = 0;
     	while (!res) {
-        int cref = propagate();                         // Boolean Constraint Propagation (BCP)
-        if (cref != -1) {                               // Find a conflict
+        int cref = propagate(); // Boolean Constraint Propagation (BCP)
+	// Find a conflict
+        if (cref != -1) {                           
             int backtrackLevel = 0, lbd = 0;
-            res = analyze(cref, backtrackLevel, lbd);   // Conflict analyze
-            if (res == 20) break;                       // Find a conflict in 0-level
-            backtrack(backtrackLevel);                  // backtracking         
-            if (learnt.size() == 1) assign(learnt[0], 0, -1);   // Learnt a unit clause.
+            res = analyze(cref, backtrackLevel, lbd); // Conflict analyze
+            if (res == 20) break; // Find a conflict in 0-level
+
+            backtrack(backtrackLevel); // backtracking
+            if (learnt.size() == 1) assign(learnt[0], 0, -1); // Learnt a unit clause
             else {                     
-                int cref = add_clause(learnt);                  // Add a clause to data base.
+                int cref = add_clause(learnt); // Add a clause to data base.
                 clause_DB[cref].lbd = lbd;              
-                assign(learnt[0], backtrackLevel, cref);        // The learnt clause implies the assignment of the UIP variable.
+                assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
             }
-            var_inc *= (1 / 0.8);                               // var_decay for locality
+            var_inc *= (1 / 0.8); // var_decay for locality
             ++restarts, ++conflicts, ++rephases, ++reduces;     
-            if ((int)trail.size() > threshold) {                // update the local-best phase
+	    // Update the local-best phase
+            if ((int)trail.size() > threshold) {
                 threshold = trail.size();                       
                 for (int i = 1; i <= vars; i++) local_best[i] = value[i];
             }

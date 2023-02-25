@@ -16,8 +16,9 @@
 ------
 ### Mandatory Papers
 
-- J. Marques-Silva, L. Inês, and M. Sharad, "Conflict-driven clause learning SAT solvers," Handbook of satisfiability, IOS press, 2021, 133-182.
-- MW. Moskewicz et al, "Chaff: Engineering an efficient SAT solver," Proceedings of the 38th annual Design Automation Conference, 2001.
-- K. Pipatsrisawat and D. Adnan, "A lightweight component caching scheme for satisfiability solvers," Theory and Applications of Satisfiability Testing–SAT 2007: 10th International Conference, Lisbon, Portugal, May 28-31, 2007.
-- G. Audemard and S. Laurent, "Predicting learnt clauses quality in modern SAT solvers," Twenty-first international joint conference on artificial intelligence, 2009.
-- A. Biere, "Cadical, lingeling, plingeling, treengeling and yalsat entering the sat competition 2017," Proceedings of SAT Competition 14 (2017): 316-336.
+- **CDCL** J. Marques-Silva, L. Inês, and M. Sharad, "Conflict-driven clause learning SAT solvers," Handbook of satisfiability, IOS press, 2021, 133-182.
+- **Chaff** MW. Moskewicz et al, "Chaff: Engineering an efficient SAT solver," Proceedings of the 38th annual Design Automation Conference, 2001.
+- **MiniSAT** N. Eén and S. Niklas, "An extensible SAT-solver," Lecture notes in computer science 2919.2004 (2004): 502-518.
+- **Phase Saving technique** K. Pipatsrisawat and D. Adnan, "A lightweight component caching scheme for satisfiability solvers," Theory and Applications of Satisfiability Testing–SAT 2007: 10th International Conference, Lisbon, Portugal, May 28-31, 2007.
+- **Glucose** G. Audemard and S. Laurent, "Predicting learnt clauses quality in modern SAT solvers," Twenty-first international joint conference on artificial intelligence, 2009.
+- **CaDiCaL** A. Biere, "Cadical, lingeling, plingeling, treengeling and yalsat entering the sat competition 2017," Proceedings of SAT Competition 14 (2017): 316-336.

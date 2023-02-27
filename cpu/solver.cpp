@@ -151,7 +151,7 @@ int Solver::propagate() {
 				continue;
             		}
             	
-			int cref = ws[i].idx_clause, k, sz;
+			int cref = ws[i].clauseIdx, k, sz;
             		Clause& c = clause_DB[cref];              
             		if ( c[0] == -p ) {
 				c[0] = c[1];
@@ -258,16 +258,16 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 }
 
 void Solver::backtrack( int backtrackLevel ) {
-    	if ( (int)pos_in_trail.size() <= backtrackLevel ) return;
-    	for ( int i = trail.size() - 1; i >= pos_in_trail[backtrackLevel]; i-- ) {
+    	if ( (int)decVarInTrail.size() <= backtrackLevel ) return;
+    	for ( int i = trail.size() - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
         	int v = abs(trail[i]);
         	value[v] = 0;
 		saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
         	if (!vsids.inHeap(v)) vsids.insert(v); // Update heap
     	}
-    	propagated = pos_in_trail[backtrackLevel];
+    	propagated = decVarInTrail[backtrackLevel];
     	trail.resize(propagated);
-    	pos_in_trail.resize(backtrackLevel);
+    	decVarInTrail.resize(backtrackLevel);
 }
 
 int Solver::decide() {      
@@ -276,9 +276,9 @@ int Solver::decide() {
         	if (vsids.empty()) return 10;
         	else next = vsids.pop();
     	} // Picking a variable according to VSIDS
-    	pos_in_trail.push_back(trail.size());
+    	decVarInTrail.push_back(trail.size());
     	if ( saved[next] ) next *= saved[next]; // Pick the polarity of the varible
-    	assign(next, pos_in_trail.size(), -1);
+    	assign(next, decVarInTrail.size(), -1);
     	return 0;
 }
 
@@ -318,10 +318,10 @@ void Solver::reduce() {
 		int new_sz = 0;
 
         	for ( int i = 0; i < old_sz; i++ ) {
-            		int old_idx = WatchPointer(v)[i].idx_clause;
+            		int old_idx = WatchPointer(v)[i].clauseIdx;
             		int new_idx = old_idx < origin_clauses ? old_idx : reduce_map[old_idx];
             		if ( new_idx != -1 ) {
-                		WatchPointer(v)[i].idx_clause = new_idx;
+                		WatchPointer(v)[i].clauseIdx = new_idx;
                 		if (new_sz != i) WatchPointer(v)[new_sz] = WatchPointer(v)[i];
                 		new_sz++;
             		}

@@ -123,16 +123,16 @@ public:
     	int *value,                                     // The variable assignement (1:True; -1:False; 0:Undefine) 
             *reason,                                    // The index of the clause that implies the variable assignment
             *level,                                     // The decision level of a variable      
-            *mark,                                      // Parameter for conflict analyzation.
-            *local_best,                                // A phase with a local deepest trail.                     
+            *mark,                                      // Parameter for conflict analyzation
+            *local_best,                                // A phase with a local deepest trail                     
             *saved;                                     // Phase saving
 
-    	double *activity;                               // The variables' score for VSIDS.   
-    	double var_inc;                                 // Parameter for VSIDS.               
-    	Heap<GreaterActivity> vsids;                    // Heap to select variable.
+    	double *activity;                               // The variables' score for VSIDS
+    	double var_inc;                                 // Parameter for VSIDS     
+    	Heap<GreaterActivity> vsids;                    // Heap to select variable
      
     	void alloc_memory();                                      // Allocate memory 
-    	void assign( int literal, int level, int cref );          // Assigned a variable.
+    	void assign( int literal, int level, int cref );          // Assigned a variable
     	int  propagate();                                         // BCP (Boolean Contraint Propagation)
     	void backtrack( int backtrack_level );                    // Backtracking
     	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation

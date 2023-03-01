@@ -15,7 +15,9 @@ double timespec_diff_sec( timespec start, timespec end ) {
 
 
 // Functions for parser
-char *read_whitespace( char *p ) {                 
+char *read_whitespace( char *p ) {      
+	// ASCII
+	// Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space	
     	while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
     	return p;
 }
@@ -43,21 +45,23 @@ char *read_int( char *p, int *i ) {
 }
 
 
-
 // Functions for Solver
 int Solver::add_clause( std::vector<int> &c ) {                   
     	clause_DB.push_back(Clause(c.size()));                          
     	int id = clause_DB.size() - 1;                                
-    	for ( int i = 0; i < (int)c.size(); i++ ) clause_DB[id][i] = c[i]; 
-    	WatchPointer(-c[0]).push_back(WL(id, c[1]));                      
-    	WatchPointer(-c[1]).push_back(WL(id, c[0]));                    
+    	for ( int i = 0; i < (int)c.size(); i++ ) clause_DB[id][i] = c[i];
+        // There's two watched literals	
+    	WatchPointer(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
+    	WatchPointer(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
     	return id;                                                      
 }
 
 int Solver::parse( char *filename ) {
-    	std::ifstream fin(filename);                                
+    	std::ifstream fin(filename);  
+
     	fin.seekg(0, fin.end);
     	size_t file_len = fin.tellg();
+
 	fin.seekg(0, fin.beg);
 	char *data = new char[file_len + 1];
 	char *p = data;
@@ -65,14 +69,14 @@ int Solver::parse( char *filename ) {
 	fin.close();                                             
 	
 	data[file_len] = '\0';
-    	std::vector<int> buffer; // Save the clause
+    	std::vector<int> buffer; // Save the clauses temporarily
     	while ( *p != '\0' ) {
         	p = read_whitespace(p);
         	if ( *p == '\0' ) break;
-        	if ( *p == 'c' ) p = read_until_new_line(p);
+        	if ( *p == 'c' ) p = read_until_new_line(p); // If there are some comments in CNF
        	 	else if ( *p == 'p' ) { 
-            		if ( *(p + 1) == ' ' && *(p + 2) == 'c' && 
-			     *(p + 3) == 'n' && *(p + 4) == 'f' ) {
+            		if ( (*(p + 1) == ' ') && (*(p + 2) == 'c') && 
+			     (*(p + 3) == 'n') && (*(p + 4) == 'f') ) {
                 		p += 5; 
 				p = read_int(p, &vars); 
 				p = read_int(p, &clauses);
@@ -83,17 +87,23 @@ int Solver::parse( char *filename ) {
         	else {                                                                             
             		int32_t dimacs_lit;
             		p = read_int(p, &dimacs_lit);
-            		if ( *p == '\0' && dimacs_lit != 0 ) {       
-                		printf("c PARSE ERROR(Unexpected EOF)!\n"), exit(1);
+            		if ( dimacs_lit != 0 ) { 
+				if ( *p == '\0' ) {
+                			printf("c PARSE ERROR(Unexpected EOF)!\n");
+					exit(1);
+				}
+				else buffer.push_back(dimacs_lit);
 			}
-            		if ( dimacs_lit == 0 ) {                                                       
-                		if ( buffer.size() == 0 ) return 20;                                     
-            	    		if ( buffer.size() == 1 && Value(buffer[0]) == -1 ) return 20; 
-                		if ( buffer.size() == 1 && !Value(buffer[0]) ) assign(buffer[0], 0, -1);   
-                		else if ( buffer.size() > 1 ) add_clause(buffer);            
+			else {                                                       
+                		if ( buffer.size() == 0 ) return 20;
+				else if ( buffer.size() == 1 ) {
+					if ( Value(buffer[0]) == -1 ) return 20;
+					else if ( !Value(buffer[0]) ) assign(buffer[0], 0, -1);
+				}
+                		else add_clause(buffer); 
+
                 		buffer.clear();                                        
-            		}       
-            		else buffer.push_back(dimacs_lit);
+            		}
         	}
     	}
     	origin_clauses = clause_DB.size();
@@ -108,27 +118,18 @@ void Solver::alloc_memory() {
     	local_best = new int[vars + 1];
     	saved = new int[vars + 1];
     	activity = new double[vars + 1];
-    	watchedPointers = new std::vector<WL>[vars * 2 + 1];
+    	watchedPointers = new std::vector<WL>[vars * 2 + 1]; // Two polarities
     	
 	conflicts = time_stamp = propagated = restarts = rephases = reduces = threshold = 0;
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
     	var_inc = 1, rephase_limit = 1024, reduce_limit = 8192;
-    
+
+    	// Initialization	
 	vsids.setComp(GreaterActivity(activity));
     	for (int i = 1; i <= vars; i++) {
         	value[i] = reason[i] = level[i] = mark[i] = local_best[i] = activity[i] = saved[i] = 0;
 		vsids.insert(i);
     	}
-}
-
-void Solver::bump_var( int var, double coeff ) {
-	// Update score and prevent float overflow
-    	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
-        	for ( int i = 1; i <= vars; i++ ) activity[i] *= 1e-100;
-        	var_inc *= 1e-100;
-	}
-	// Update Heap
-    	if ( vsids.inHeap(var) ) vsids.update(var);
 }
 
 void Solver::assign( int literal, int l, int cref ) {
@@ -139,51 +140,88 @@ void Solver::assign( int literal, int l, int cref ) {
     	trail.push_back(literal);
 }
 
+int Solver::decide() {      
+    	int next = -1;
+	// Pick up a variable based on VSIDS
+	while ( next == -1 || Value(next) != 0 ) {
+        	if (vsids.empty()) return 10;
+        	else next = vsids.pop();
+    	}
+    	decVarInTrail.push_back(trail.size());
+    	// If there's saved one(polarity), use that
+	if ( saved[next] ) next *= saved[next];
+
+    	assign(next, decVarInTrail.size(), -1);
+    	
+	return 0;
+}
+
 int Solver::propagate() {
+	// This propagate style is fully based on MiniSAT
     	while ( propagated < (int)trail.size() ) { 
-        	int p = trail[propagated++];
+        	int p = trail[propagated++]; // 'p' is enqueued fact to propagate
         	std::vector<WL> &ws = WatchPointer(p);
-        	int i, j, size = ws.size();                     
-        	for ( i = j = 0; i < size;  ) {               
+		int size = ws.size();
+        	int i, j;                     
+        	for ( i = j = 0; i < size;  ) {
+			// Try to avoid inspecting the clause
             		int blocker = ws[i].blocker;                       
 			if ( Value(blocker) == 1 ) {                
                 		ws[j++] = ws[i++]; 
 				continue;
             		}
-            	
-			int cref = ws[i].clauseIdx, k, sz;
+            		// Make sure the false literal is 'c[1]'
+			int cref = ws[i].clauseIdx;
+			int falseLiteral = -p;
             		Clause& c = clause_DB[cref];              
-            		if ( c[0] == -p ) {
+            		if ( c[0] == falseLiteral ) {
 				c[0] = c[1];
-				c[1] = -p;     
+				c[1] = falseLiteral;
 			}
-            	
-			WL w = WL(cref, c[0]);            
-            		i++;
-            	
-			if ( Value(c[0]) == 1 ) {                   
+			i++;
+			// If 0th watch pointer is true, then clause is already satisfied
+			int firstWP = c[0];
+			WL w = WL(cref, firstWP);
+			if ( Value(firstWP) == 1 ) {                   
                 		ws[j++] = w; 
 				continue;
             		}
-
-            		for ( k = 2, sz = c.literals.size(); k < sz && Value(c[k]) == -1; k++ );    
-            		if ( k < sz ) {                           
-                		c[1] = c[k], c[k] = -p;
+			// Look for new watch pointer
+			int k;
+			int sz = c.literals.size();
+            		for ( k = 2; (k < sz) && (Value(c[k]) == -1); k++ ); 
+			if ( k < sz ) {                           
+                		c[1] = c[k];
+				c[k] = falseLiteral;
                 		WatchPointer(-c[1]).push_back(w);
-            		}
-            		else {                                      
-                		ws[j++] = w;
-                		if ( Value(c[0]) == -1 ) { 
+			}         
+			else { // Did not find new watch, clause is unit under assignment
+				ws[j++] = w;
+				// Conflict!
+                		if ( Value(firstWP) == -1 ) { 
                     			while ( i < size ) ws[j++] = ws[i++];
+					// Shrink
                     			ws.resize(j);
                     			return cref;
                 		}
-                		else assign(c[0], level[abs(p)], cref);
-            		}
-        	}
+				// Not conflict!
+                		else assign(firstWP, level[abs(p)], cref);
+			}
+            	}
+		// Shrink
         	ws.resize(j);
     	}
     	return -1;                                       
+}
+
+void Solver::bump_var( int var, double coeff ) {
+	// Update score and prevent float overflow
+    	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
+        	for ( int i = 1; i <= vars; i++ ) activity[i] *= 1e-100;
+        	var_inc *= 1e-100;
+	}
+	// Update Heap
+    	if ( vsids.inHeap(var) ) vsids.update(var);
 }
 
 int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
@@ -270,18 +308,6 @@ void Solver::backtrack( int backtrackLevel ) {
     	decVarInTrail.resize(backtrackLevel);
 }
 
-int Solver::decide() {      
-    	int next = -1;
-    	while ( next == -1 || Value(next) != 0 ) {
-        	if (vsids.empty()) return 10;
-        	else next = vsids.pop();
-    	} // Picking a variable according to VSIDS
-    	decVarInTrail.push_back(trail.size());
-    	if ( saved[next] ) next *= saved[next]; // Pick the polarity of the varible
-    	assign(next, decVarInTrail.size(), -1);
-    	return 0;
-}
-
 void Solver::restart() {
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = 0;
     	backtrack(0);
@@ -365,7 +391,7 @@ int Solver::solve() {
 
 void Solver::printModel() {
     	for ( int i = 1; i <= vars; i++ ) printf("%d ", value[i] * i);
-    	puts("0");
+    	printf( "0\n" );
 }
 
 int main( int argc, char **argv ) {

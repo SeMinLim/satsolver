@@ -228,69 +228,77 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	++time_stamp;
     	learnt.clear();
     	Clause &c = clause_DB[conflict]; 
-    	
-	int highestLevel = level[abs(c[0])];
-    	if ( highestLevel == 0 ) return 20;
-    	
-	learnt.push_back(0);        
-   	std::vector<int> bump;  
-    	int should_visit_ct = 0;    
-        int resolve_lit = 0;        
-        int index = trail.size() - 1;
-    	do {
-        	Clause &c = clause_DB[conflict];
-        	for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
-            		int var = abs(c[i]);
-            		if ( mark[var] != time_stamp && level[var] > 0 ) {
-                		bump_var(var, 0.5);
-                		bump.push_back(var);
-                		mark[var] = time_stamp;
-                		if ( level[var] >= highestLevel ) should_visit_ct++;
-                		else learnt.push_back(c[i]);
-            		}
-        	}
-        	
-		do {                                
-            		while ( mark[abs(trail[index--])] != time_stamp );
-            		resolve_lit = trail[index + 1];
-        	} while ( level[abs(resolve_lit)] < highestLevel );
-        	
-		conflict = reason[abs(resolve_lit)];
-		mark[abs(resolve_lit)] = 0;
-		should_visit_ct--;
-    	} while ( should_visit_ct > 0 );           
-    
-	learnt[0] = -resolve_lit;
-    	++time_stamp;
-	lbd = 0;
-    	for ( int i = 0; i < (int)learnt.size(); i++ ) {   
-        	int l = level[abs(learnt[i])];
-        	if ( l && mark[l] != time_stamp ) 
-            	mark[l] = time_stamp, ++lbd;
-    	}
-    	if ( lbd_queue_size < 50 ) lbd_queue_size++;      
-    	else fast_lbd_sum -= lbd_queue[lbd_queue_pos];
-	
-	fast_lbd_sum += lbd;
-	lbd_queue[lbd_queue_pos++] = lbd;
-    	
-	if ( lbd_queue_pos == 50 ) lbd_queue_pos = 0;
-    	slow_lbd_sum += (lbd > 50 ? 50 : lbd);
-    	
-	if ( learnt.size() == 1 ) backtrackLevel = 0;
-    	else {                                         
-        	int max_id = 1;
-        	for ( int i = 2; i < (int)learnt.size(); i++ ) {
-            		if ( level[abs(learnt[i])] > level[abs(learnt[max_id])] ) max_id = i;
+	int conflictLevel = level[abs(c[0])];
+
+    	if ( conflictLevel == 0 ) return 20; // UNSAT
+	else {
+		learnt.push_back(0); // Leave a place to save the first UIP
+		std::vector<int> bump;
+		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
+		int resolve_lit = 0; // The literal to do resolution
+		int index = trail.size() - 1;
+		// First UIP learning method
+		do {
+			Clause &c = clause_DB[conflict];
+			// Mark the literals
+			for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
+				int var = abs(c[i]);
+				if ( mark[var] != time_stamp && level[var] > 0 ) {
+					bump_var(var, 0.5);
+					bump.push_back(var);
+					mark[var] = time_stamp;
+					if ( level[var] >= conflictLevel ) should_visit_ct++;
+					else learnt.push_back(c[i]);
+				}
+			}
+			// Find the last marked literal in the trail to do resolution
+			do {
+				while ( mark[abs(trail[index--])] != time_stamp );
+				resolve_lit = trail[index + 1];
+			} while ( level[abs(resolve_lit)] < conflictLevel );
+			
+			conflict = reason[abs(resolve_lit)];
+			mark[abs(resolve_lit)] = 0;
+			should_visit_ct--;
+		} while ( should_visit_ct > 0 );
+
+		learnt[0] = -resolve_lit;
+		++time_stamp;
+		lbd = 0;
+		
+		// Calculate LBD
+		for ( int i = 0; i < (int)learnt.size(); i++ ) {
+			int l = level[abs(learnt[i])];
+			if ( l && mark[l] != time_stamp ) {
+				mark[l] = time_stamp;
+				++lbd;
+			}
 		}
-        	int p = learnt[max_id];
-        	learnt[max_id] = learnt[1];
-		learnt[1] = p;
-		backtrackLevel = level[abs(p)];
-    	}
-    	
-	for ( int i = 0; i < (int)bump.size(); i++ ) {   
-        	if (level[bump[i]] >= backtrackLevel - 1) bump_var(bump[i], 1);
+
+		if ( lbd_queue_size < 50 ) lbd_queue_size++;
+		else fast_lbd_sum -= lbd_queue[lbd_queue_pos];
+		
+		fast_lbd_sum += lbd; // Sum of the recent 50 LBDs
+		lbd_queue[lbd_queue_pos++] = lbd;
+		
+		if ( lbd_queue_pos == 50 ) lbd_queue_pos = 0;
+		slow_lbd_sum += (lbd > 50 ? 50 : lbd); // Sum of the global LBDs
+			
+		if ( learnt.size() == 1 ) backtrackLevel = 0;
+		else {
+			int max_id = 1;
+			for ( int i = 2; i < (int)learnt.size(); i++ ) {
+				if ( level[abs(learnt[i])] > level[abs(learnt[max_id])] ) max_id = i;
+			}
+			int p = learnt[max_id];
+			learnt[max_id] = learnt[1];
+			learnt[1] = p;
+			backtrackLevel = level[abs(p)];
+		}
+
+		for ( int i = 0; i < (int)bump.size(); i++ ) {   
+			if ( level[bump[i]] >= backtrackLevel - 1 ) bump_var(bump[i], 1);
+		}
 	}
     	return 0;
 }
@@ -359,34 +367,39 @@ void Solver::reduce() {
 int Solver::solve() {
     	int res = 0;
     	while (!res) {
-        int cref = propagate(); // Boolean Constraint Propagation (BCP)
-	// Find a conflict
-        if (cref != -1) {                           
-            int backtrackLevel = 0, lbd = 0;
-            res = analyze(cref, backtrackLevel, lbd); // Conflict analyze
-            if (res == 20) break; // Find a conflict in 0-level
-
-            backtrack(backtrackLevel); // backtracking
-            if (learnt.size() == 1) assign(learnt[0], 0, -1); // Learnt a unit clause
-            else {                     
-                int cref = add_clause(learnt); // Add a clause to data base.
-                clause_DB[cref].lbd = lbd;              
-                assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
-            }
-            var_inc *= (1 / 0.8); // var_decay for locality
-            ++restarts, ++conflicts, ++rephases, ++reduces;     
-	    // Update the local-best phase
-            if ((int)trail.size() > threshold) {
-                threshold = trail.size();                       
-                for (int i = 1; i <= vars; i++) local_best[i] = value[i];
-            }
-        }
-        else if (reduces >= reduce_limit) reduce();            
-        else if (lbd_queue_size == 50 && 0.8 * fast_lbd_sum / lbd_queue_size > slow_lbd_sum / conflicts) restart(); 
-        else if (rephases >= rephase_limit) rephase();
-        else res = decide();
-    }
-    return res;
+		int cref = propagate(); // Boolean Constraint Propagation (BCP)
+		// Find a conflict
+		if ( cref != -1 ) {
+			int backtrackLevel = 0; 
+			int lbd = 0;
+			res = analyze(cref, backtrackLevel, lbd); // Conflict analyze
+			
+			if ( res == 20 ) break; // Find a conflict in 0 decision level
+			else {
+				backtrack(backtrackLevel); // backtracking
+				
+				if ( learnt.size() == 1 ) assign(learnt[0], 0, -1); // Learnt a unit clause
+				else {
+					int cref = add_clause(learnt); // Add a clause to data base.
+					clause_DB[cref].lbd = lbd;
+					assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
+				}
+				var_inc *= (1 / 0.8); // var_decay for locality
+				++restarts, ++conflicts, ++rephases, ++reduces;
+				
+				// Update the local-best phase
+				if ( (int)trail.size() > threshold ) {
+					threshold = trail.size();
+					for ( int i = 1; i < vars + 1; i++ ) local_best[i] = value[i];
+				}
+			}
+		}
+		else if ( reduces >= reduce_limit ) reduce();
+		else if ( (lbd_queue_size == 50) && (0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) restart();
+		else if ( rephases >= rephase_limit ) rephase();
+		else res = decide();
+	}
+	return res;
 }
 
 void Solver::printModel() {

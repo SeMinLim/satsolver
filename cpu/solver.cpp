@@ -305,15 +305,17 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 
 void Solver::backtrack( int backtrackLevel ) {
     	if ( (int)decVarInTrail.size() <= backtrackLevel ) return;
-    	for ( int i = trail.size() - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
-        	int v = abs(trail[i]);
-        	value[v] = 0;
-		saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
-        	if (!vsids.inHeap(v)) vsids.insert(v); // Update heap
-    	}
-    	propagated = decVarInTrail[backtrackLevel];
-    	trail.resize(propagated);
-    	decVarInTrail.resize(backtrackLevel);
+	else {
+		for ( int i = trail.size() - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
+			int v = abs(trail[i]);
+			value[v] = 0;
+			saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
+			if ( !vsids.inHeap(v) ) vsids.insert(v); // Update heap
+		}
+		propagated = decVarInTrail[backtrackLevel];
+		trail.resize(propagated);
+		decVarInTrail.resize(backtrackLevel);
+	}
 }
 
 void Solver::restart() {

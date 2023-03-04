@@ -110,7 +110,7 @@ public:
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, conflicts
     	int restarts, rephases, reduces;                // Parameters for restart, rephase, and reduce
-    	int rephase_limit, reduce_limit;                // Parameters for rephase and reduce
+    	int rephase_inc, rephase_limit, reduce_limit;   // Parameters for rephase and reduce
     	int threshold;                                  // A threshold for updating the local_best phase
     	int propagated;                                 // The number of propagted literals in trail
     	int time_stamp;                                 // Parameter for conflict analyzation and LBD calculation   

@@ -122,7 +122,7 @@ void Solver::alloc_memory() {
     	
 	conflicts = time_stamp = propagated = restarts = rephases = reduces = threshold = 0;
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
-    	var_inc = 1, rephase_limit = 8192, reduce_limit = 8192;
+    	var_inc = 1, rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192;
 
     	// Initialization	
 	vsids.setComp(GreaterActivity(activity));
@@ -320,15 +320,18 @@ void Solver::backtrack( int backtrackLevel ) {
 
 void Solver::restart() {
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = 0;
-    	backtrack(0);
+    	backtrack(decVarInTrail.size());
+	restarts++;
 }
 
 void Solver::rephase() {
-    	rephases = 0, threshold *= 0.9, rephase_limit *= 2;
-	int phase_rand = rand() % 100;
-    	if ((phase_rand -= 60) < 0) for (int i = 1; i <= vars; i++) saved[i] = local_best[i];
-    	else if ((phase_rand -= 5) < 0) for (int i = 1; i <= vars; i++) saved[i] = -local_best[i];
-    	else if ((phase_rand -= 20) < 0) for (int i = 1; i <= vars; i++) saved[i] = rand() % 2 ? 1 : -1;
+	if ( (rephases / 2) == 1 ) for ( int i = 1; i <= vars; i++ ) saved[i] = local_best[i];
+	else for ( int i = 1; i <= vars; i++ ) saved[i] = -local_best[i];
+	backtrack(decVarInTrail.size());
+	rephase_inc *= 2;
+	rephase_limit = conflicts + rephase_inc;
+	threshold *= 0.9;
+	rephases++;
 }
 
 void Solver::reduce() {
@@ -387,7 +390,7 @@ int Solver::solve() {
 					assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
 				}
 				var_inc *= (1 / 0.8); // var_decay for locality
-				++restarts, ++conflicts, ++rephases, ++reduces;
+				++conflicts, ++reduces;
 				
 				// Update the local-best phase
 				if ( (int)trail.size() > threshold ) {
@@ -397,11 +400,8 @@ int Solver::solve() {
 			}
 		}
 		else if ( reduces >= reduce_limit ) reduce();
-		else if ( (lbd_queue_size == 50) && (0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) {
-			restart(); 
-			rephase();
-		}
-		//else if ( rephases >= rephase_limit ) rephase();
+		else if ( (lbd_queue_size == 50) && (0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) restart();
+		else if ( conflicts >= rephase_limit ) rephase();
 		else res = decide();
 	}
 	return res;

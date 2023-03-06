@@ -5,6 +5,7 @@
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
 
+
 // Heap data structure
 template<class Compare>
 class Heap {

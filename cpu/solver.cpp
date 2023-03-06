@@ -1,40 +1,38 @@
-#include "solver.h"
 #include <fstream>
-#include <time.h>
-#include <sys/time.h>
+#include "solver.h"
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
 #define WatchPointer(id) (watchedPointers[vars + id])
 
 
 // Functions for parser
-char *read_whitespace( char *p ) {      
-	// ASCII
-	// Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space	
-    	while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
-    	return p;
+char *read_whitespace( char *p ) {
+        // ASCII
+        // Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space
+        while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
+        return p;
 }
 char *read_until_new_line( char *p ) {
-    	while ( *p != '\n' ) {
-        	if ( *p++ == '\0' ) exit(1);
-   	}
-    	return ++p;
+        while ( *p != '\n' ) {
+                if ( *p++ == '\0' ) exit(1);
+        }
+        return ++p;
 }
 char *read_int( char *p, int *i ) {
-    	bool sym = true; 
-	*i = 0;
-    	p = read_whitespace(p);
-    	if ( *p == '-' ) {
-		sym = false;
-	       	++p;
-	}
-    	while ( *p >= '0' && *p <= '9' ) {
-        	if ( *p == '\0' ) return p;
-        	*i = *i * 10 + *p - '0'; 
-		++p;
-    	}
-    	if ( !sym ) *i = -(*i);
-    	return p;
+        bool sym = true;
+        *i = 0;
+        p = read_whitespace(p);
+        if ( *p == '-' ) {
+                sym = false;
+                ++p;
+        }
+        while ( *p >= '0' && *p <= '9' ) {
+                if ( *p == '\0' ) return p;
+                *i = *i * 10 + *p - '0';
+                ++p;
+        }
+        if ( !sym ) *i = -(*i);
+        return p;
 }
 
 
@@ -403,41 +401,4 @@ int Solver::solve() {
 void Solver::printModel() {
     	for ( int i = 1; i <= vars; i++ ) printf("%d ", value[i] * i);
     	printf( "0\n" );
-}
-
-int main( int argc, char **argv ) {
-    	struct timeval tv;
-	double begin, end;
-    
-	Solver S;
-    
-	gettimeofday(&tv, NULL);
-	begin = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
-    	
-	int res = S.parse(argv[1]);
-    	
-	gettimeofday(&tv, NULL);
-	end = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
-
-    	double diff = (end - begin) / 1000;
-	printf( "Parsing Time: %f\n", diff );
-    
-	if ( res == 20 ) printf("s UNSATISFIABLE\n");
-    	else {
-		gettimeofday(&tv, NULL);
-		begin = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
-
-        	res = S.solve();
-        	if ( res == 10 ) {
-           		 printf("s SATISFIABLE\n");
-            		S.printModel();
-        	}
-        	else if ( res == 20 ) printf("s UNSATISFIABLE\n");
-		gettimeofday(&tv, NULL);
-		end = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
-
-		diff = (end - begin) / 1000;
-		printf( "Elapsed Time: %f\n", diff );
-    	}
-    	return 0;
 }

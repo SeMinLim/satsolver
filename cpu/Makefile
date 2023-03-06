@@ -1,6 +1,5 @@
 LIB = -lrt
 
-all:
+all: $(wildcard *.cpp)
 	mkdir -p obj
-	g++ solver.cpp -o obj/solver $(LIB) -pedantic -g -Wall -O3
-
+	g++ -o obj/main $(wildcard *.cpp) -Wall -pedantic -g -O3

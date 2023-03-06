@@ -1,17 +1,10 @@
 #include "solver.h"
 #include <fstream>
 #include <time.h>
+#include <sys/time.h>
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
 #define WatchPointer(id) (watchedPointers[vars + id])
-
-
-// Elapsed time checker
-double timespec_diff_sec( timespec start, timespec end ) {
-	double t = end.tv_sec - start.tv_sec;
-	t += ((double)(end.tv_nsec - start.tv_nsec)/1000000000L);
-	return t;
-}
 
 
 // Functions for parser
@@ -413,28 +406,37 @@ void Solver::printModel() {
 }
 
 int main( int argc, char **argv ) {
-    	timespec start;
-    	timespec now;
+    	struct timeval tv;
+	double begin, end;
     
 	Solver S;
     
-	clock_gettime(CLOCK_REALTIME, &start);
-    	int res = S.parse(argv[1]);
-    	clock_gettime(CLOCK_REALTIME, &now);
-    	double diff = timespec_diff_sec(start, now);
-    	printf( "Parsing Time: %f\n", diff );
+	gettimeofday(&tv, NULL);
+	begin = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+    	
+	int res = S.parse(argv[1]);
+    	
+	gettimeofday(&tv, NULL);
+	end = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+
+    	double diff = (end - begin) / 1000;
+	printf( "Parsing Time: %f\n", diff );
     
 	if ( res == 20 ) printf("s UNSATISFIABLE\n");
     	else {
-		clock_gettime(CLOCK_REALTIME, &start);
+		gettimeofday(&tv, NULL);
+		begin = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+
         	res = S.solve();
         	if ( res == 10 ) {
            		 printf("s SATISFIABLE\n");
             		S.printModel();
         	}
         	else if ( res == 20 ) printf("s UNSATISFIABLE\n");
-		clock_gettime(CLOCK_REALTIME, &now);
-		diff = timespec_diff_sec(start, now);
+		gettimeofday(&tv, NULL);
+		end = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+
+		diff = (end - begin) / 1000;
 		printf( "Elapsed Time: %f\n", diff );
     	}
     	return 0;

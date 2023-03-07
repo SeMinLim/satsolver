@@ -321,7 +321,6 @@ void Solver::rephase() {
 	backtrack(decVarInTrail.size());
 	rephase_inc *= 2;
 	rephase_limit = conflicts + rephase_inc;
-	threshold *= 0.9;
 	rephases++;
 }
 

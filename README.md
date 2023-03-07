@@ -6,7 +6,7 @@
 - Lazy Data Structure
   - The Watched Literal [Based on Chaff]
 - Literal Block Distance Scoring Scheme [Based on Glucose]
-- Search Restart
+- Dynamic Search Restart [Based on Glucose]
 - Conflict-Driven Branching Heuristics
   - VSIDS(Variable State Independent Decaying Sum) with Heap Data Structure
 - Clause Deletion Strategies

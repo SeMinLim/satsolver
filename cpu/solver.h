@@ -109,7 +109,8 @@ public:
     	std::vector<Clause> clause_DB;                  // Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
-	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, conflicts
+	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
+	int decides, propagations;			// The number of decides and propagations
     	int restarts, rephases, reduces;                // Parameters for restart, rephase, and reduce
     	int rephase_inc, rephase_limit, reduce_limit;   // Parameters for rephase and reduce
     	int threshold;                                  // A threshold for updating the local_best phase

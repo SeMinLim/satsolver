@@ -56,6 +56,10 @@ int main( int argc, char **argv ) {
 
                 printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
                 printf( "Elapsed Time (REAL): %.2f\n", timeProcessREAL );
+		printf( "Conflicts: %d\n", S.conflicts );
+		printf( "Decisions: %d\n", S.decides );
+		printf( "Propagations: %d\n", S.propagations );
+		printf( "Evaluations: %d\n", S.propagations + S.decides );
         }
         return 0;
 }

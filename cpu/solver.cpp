@@ -143,7 +143,7 @@ int Solver::decide() {
 	if ( saved[next] ) next *= saved[next];
 
     	assign(next, decVarInTrail.size(), -1);
-    	
+    	decides++;
 	return 0;
 }
 
@@ -196,7 +196,10 @@ int Solver::propagate() {
                     			return cref;
                 		}
 				// Not conflict!
-                		else assign(firstWP, level[abs(p)], cref);
+                		else {
+					assign(firstWP, level[abs(p)], cref);
+					propagations++;
+				}
 			}
             	}
 		// Shrink

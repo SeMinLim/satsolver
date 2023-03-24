@@ -1,5 +1,18 @@
-LIB = -lrt
+.DEFAULT_GOAL := all
+RISCV_DIR=/mnt/sdb/semin/riscv-gnu-toolchain/build/bin
 
-all: $(wildcard *.cpp)
-	mkdir -p obj
-	riscv64-unknown-elf-g++ -o obj/main $(wildcard *.cpp) -Wall -pedantic -g -O3
+RISCV_TARGET=$(RISCV_DIR)/riscv64-unknown-linux-gnu-
+
+CFLAGS=-mcmodel=medany -nostdlib -nostartfiles -march=rv32i -mabi=ilp32 -mstrict-align -static -fvisibility=hidden
+LDFLAGS=-march=rv32i -nostdlib -nostartfiles -Wl,-T./bare-link.ld
+OBJDUMPFLAGS=-d -Mno-aliases
+OBJDIR=./obj/
+
+
+all:
+	mkdir -p $(OBJDIR)
+	$(RISCV_TARGET)g++ $(CFLAGS) $(LDFLAGS) entry.s solver.cpp main.cpp -o $(OBJDIR)/binary.elf
+	$(RISCV_TARGET)objdump $(OBJDUMPFLAGS) ./$(OBJDIR)/binary.elf > ./$(OBJDIR)/satsolver.dump
+	cd $(OBJDIR); bash ../strip.sh
+	mv $(OBJDIR)/binary.bin $(OBJDIR)/satsolver.bin
+	rm $(OBJDIR)/binary.elf

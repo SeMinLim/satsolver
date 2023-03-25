@@ -1,66 +1,65 @@
-#include <time.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
 #include "solver.h"
 
 
-// Elapsed time checker
-static inline double timeCheckerCPU(void) {
-        struct rusage ru;
-        getrusage(RUSAGE_SELF, &ru);
-        return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
-}
-
-static inline double timeCheckerREAL() {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return (double)tv.tv_sec + (double) tv.tv_usec / 1000000;
-}
+char volatile * const printchar = (char*)0xfff;
 
 
 int main( int argc, char **argv ) {
         Solver S;
 
-        double parseTimeInitCPU = timeCheckerCPU();
-        double parseTimeInitREAL = timeCheckerREAL();
-
         int res = S.parse(argv[1]);
 
-        double parseTimeFinishCPU = timeCheckerCPU();
-        double parseTimeFinishREAL = timeCheckerREAL();
-
-        double timeParseCPU = parseTimeFinishCPU - parseTimeInitCPU;
-        double timeParseREAL = parseTimeFinishREAL - parseTimeInitREAL;
-
-        printf( "Parsing Time (CPU): %.2f\n", timeParseCPU );
-        printf( "Parsing Time (REAL): %.2f\n", timeParseREAL );
-
-        if ( res == 20 ) printf("s UNSATISFIABLE\n");
+        if ( res == 20 ) {
+		//printf("s UNSATISFIABLE\n");
+		(*printchar) = 0x55; // U
+		(*printchar) = 0x4e; // N
+		(*printchar) = 0x53; // S
+		(*printchar) = 0x41; // A
+		(*printchar) = 0x54; // T
+		(*printchar) = 0x49; // I
+		(*printchar) = 0x53; // S
+		(*printchar) = 0x46; // F
+		(*printchar) = 0x49; // I
+		(*printchar) = 0x41; // A
+		(*printchar) = 0x42; // B
+		(*printchar) = 0x4c; // L
+		(*printchar) = 0x45; // E
+		(*printchar) = 0x0a; // \n
+	}
         else {
-                double processTimeInitCPU = timeCheckerCPU();
-                double processTimeInitREAL = timeCheckerREAL();
-
                 res = S.solve();
                 if ( res == 10 ) {
-                         printf("s SATISFIABLE\n");
-                        S.printModel();
+                        //printf("s SATISFIABLE\n");
+			(*printchar) = 0x53; // S
+			(*printchar) = 0x41; // A
+			(*printchar) = 0x54; // T
+			(*printchar) = 0x49; // I
+			(*printchar) = 0x53; // S
+			(*printchar) = 0x46; // F
+			(*printchar) = 0x49; // I
+			(*printchar) = 0x41; // A
+			(*printchar) = 0x42; // B
+			(*printchar) = 0x4c; // L
+			(*printchar) = 0x45; // E
+			(*printchar) = 0x0a; // \n
                 }
-                else if ( res == 20 ) printf("s UNSATISFIABLE\n");
-
-                double processTimeFinishCPU = timeCheckerCPU();
-                double processTimeFinishREAL = timeCheckerREAL();
-
-                double timeProcessCPU = processTimeFinishCPU - processTimeInitCPU;
-                double timeProcessREAL = processTimeFinishREAL - processTimeInitREAL;
-
-                printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
-                printf( "Elapsed Time (REAL): %.2f\n", timeProcessREAL );
-		printf( "Conflicts: %d\n", S.conflicts );
-		printf( "Decisions: %d\n", S.decides );
-		printf( "Propagations: %d\n", S.propagations );
-		printf( "Evaluations: %d\n", S.propagations + S.decides );
+                else if ( res == 20 ) {
+			//printf("s UNSATISFIABLE\n");
+			(*printchar) = 0x55; // U
+			(*printchar) = 0x4e; // N
+			(*printchar) = 0x53; // S
+			(*printchar) = 0x41; // A
+			(*printchar) = 0x54; // T
+			(*printchar) = 0x49; // I
+			(*printchar) = 0x53; // S
+			(*printchar) = 0x46; // F
+			(*printchar) = 0x49; // I
+			(*printchar) = 0x41; // A
+			(*printchar) = 0x42; // B
+			(*printchar) = 0x4c; // L
+			(*printchar) = 0x45; // E
+			(*printchar) = 0x0a; // \n
+		}
         }
-        return 0;
 }
 

@@ -399,8 +399,3 @@ int Solver::solve() {
 	}
 	return res;
 }
-
-void Solver::printModel() {
-    	for ( int i = 1; i <= vars; i++ ) printf("%d ", value[i] * i);
-    	printf( "0\n" );
-}

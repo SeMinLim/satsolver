@@ -13,11 +13,11 @@
 #define VECTOR_CLEAR(vec) vector_clear(&vec)
 
 
-typedef struct vector {
+struct vector {
 	void **items;
 	int capacity;
 	int total;
-} vector;
+};
 
 void vector_init( vector *v );
 int vector_size( vector *v );

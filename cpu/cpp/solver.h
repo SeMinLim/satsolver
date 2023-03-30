@@ -13,7 +13,7 @@ class Heap {
     	std::vector<int> heap; // Value
     	std::vector<int> pos; // Position
     
-    	void up(int v) {
+    	void up( int v ) {
         	int x = heap[v];
 		int p = Parent(v);
 		// Child > Parent -> True
@@ -27,11 +27,12 @@ class Heap {
 		pos[x] = v;
     	}
 
-    	void down(int v) {
+    	void down( int v ) {
         	int x = heap[v];
-        	while (ChildLeft(v) < (int)heap.size()){
+        	while ( ChildLeft(v) < (int)heap.size() ){
             		// Pick the bigger one among left and right child
-			int child = (ChildRight(v) < (int)heap.size()) && lt(heap[ChildRight(v)], heap[ChildLeft(v)]) ? ChildRight(v) : ChildLeft(v);
+			int child = (ChildRight(v) < (int)heap.size()) && lt(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
+				    ChildRight(v) : ChildLeft(v);
             		if ( lt(x, heap[child]) ) break;
 			else {
 				heap[v] = heap[child];
@@ -44,12 +45,12 @@ class Heap {
     	}
 
 public:
-    	void setComp   (Compare c)           { lt = c; }
-    	bool empty     ()              const { return heap.size() == 0; }
-    	bool inHeap    (int n)         const { return (n < (int)pos.size()) && (pos[n] >= 0); }
-    	void update    (int x)               { up(pos[x]); }
+    	void setComp   ( Compare c )           { lt = c; }
+    	bool empty     ()                const { return heap.size() == 0; }
+    	bool inHeap    ( int n )         const { return (n < (int)pos.size()) && (pos[n] >= 0); }
+    	void update    ( int x )               { up(pos[x]); }
 
-    	void insert(int x) {
+    	void insert( int x ) {
         	if ( (int)pos.size() < x + 1 ) pos.resize(x + 1, -1);	
 		pos[x] = heap.size();
         	heap.push_back(x);

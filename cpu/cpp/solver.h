@@ -1,5 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <vector>
-#include <fstream>
 
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)

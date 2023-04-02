@@ -1,4 +1,3 @@
-#include <fstream>
 #include "solver.h"
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
@@ -48,20 +47,21 @@ int Solver::add_clause( std::vector<int> &c ) {
 }
 
 int Solver::parse( char *filename ) {
-    	std::ifstream fin(filename);  
+    	FILE *f_data = fopen(filename, "r");  
 
-    	fin.seekg(0, fin.end);
-    	size_t file_len = fin.tellg();
+    	fseek(f_data, 0, SEEK_END);
+    	size_t file_len = ftell(f_data); // Get the file size
 
-	fin.seekg(0, fin.beg);
+	fseek(f_data, 0, SEEK_SET);
 	char *data = new char[file_len + 1];
 	char *p = data;
-	fin.read(data, file_len);
-	fin.close();                                             
-	
-	data[file_len] = '\0';
+	fread(data, sizeof(char), file_len, f_data);
+	fclose(f_data);                                             
+	data[file_len] = '\0'; // Read the file
+
     	std::vector<int> buffer; // Save the clauses temporarily
-    	while ( *p != '\0' ) {
+    	
+	while ( *p != '\0' ) {
         	p = read_whitespace(p);
         	if ( *p == '\0' ) break;
         	if ( *p == 'c' ) p = read_until_new_line(p); // If there are some comments in CNF

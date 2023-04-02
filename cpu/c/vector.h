@@ -7,36 +7,36 @@
 
 #define VECTOR_INIT_CAPACITY 4
 
-#define VECTOR_INIT(vec) vector vec; vector_functions.init(&vec)
-#define VECTOR_SIZE(vec) vector_functions.size(&vec)
-#define VECTOR_RESIZE(vec, size, value) vector_functions.resize(&vec, size, value)
-#define VECTOR_PUSHBACK(vec, item) vector_functions.pushback(&vec, (void*) item)
-#define VECTOR_SET(vec, id, item) vector_functions.set(&vec, id, (void*) item)
-#define VECTOR_GET(vec, type, id) (type*) vector_functions.get(&vec, id)
-#define VECTOR_BACK(vec, type) (type*) vector_functions.back(&vec)
-#define VECTOR_DELETE(vec, id) vector_functions.delete(&vec, id)
-#define VECTOR_POPBACK(vec) vector_functions.popback(&vec)
-#define VECTOR_CLEAR(vec) vector_functions.clear(&vec)
+#define Vector.init(vec) Vector vec; VectorFunctions.init(&vec)
+#define Vector.size(vec) VectorFunctions.size(&vec)
+#define Vector.resize(vec, size, value) VectorFunctions.resize(&vec, size, value)
+#define Vector.pushback(vec, item) VectorFunctions.pushback(&vec, (void*) item)
+#define Vector.set(vec, id, item) VectorFunctions.set(&vec, id, (void*) item)
+#define Vector.get(vec, type, id) (type*) VectorFunctions.get(&vec, id)
+#define Vector.back(vec, type) (type*) VectorFunctions.back(&vec)
+#define Vector.delete(vec, id) VectorFunctions.delete(&vec, id)
+#define Vector.popback(vec) VectorFunctions.popback(&vec)
+#define Vector.clear(vec) VectorFunctions.clear(&vec)
 
 
-typedef struct vector {
+typedef struct Vector {
 	void **items;
 	int capacity;
 	int total;
-} vector;
+} Vector;
 
-typedef struct vector_functions {
-	void init( vector *v );
-	int size( vector *v );
-	static void recapacity( vector *v, int capacity );
-	void resize( vector *v, int size, int value );
-	void pushback( vector *v, void *item );
-	void set( vector *v, int index, void *item );
-	void *get( vector *v, int index );
-	void *back( vector *v );
-	void delete( vector *v, int index );
-	void popback( vector *v );
-	void clear( vector *v );
-} vector_functions;
+typedef struct VectorFunctions {
+	void init( Vector *v );
+	int size( Vector *v );
+	static void recapacity( Vector *v, int capacity );
+	void resize( Vector *v, int size, int value );
+	void pushback( Vector *v, void *item );
+	void set( Vector *v, int index, void *item );
+	void *get( Vector *v, int index );
+	void *back( Vector *v );
+	void delete( Vector *v, int index );
+	void popback( Vector *v );
+	void clear( Vector *v );
+} VectorFunctions;
 
 #endif

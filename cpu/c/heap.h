@@ -7,28 +7,28 @@
 #include "vector.h"
 
 
-#define CHILDLEFT(x) (x << 1 | 1)
-#define CHILDRIGHT(x) ((x + 1) << 1)
-#define PARENT(x) ((x - 1) >> 1)
+#define ChildLeft(x) (x << 1 | 1)
+#define ChildRight(x) ((x + 1) << 1)
+#define Parent(x) ((x - 1) >> 1)
 
 
 // Heap data structure
-typedef struct greater_activity {
+typedef struct GreaterActivity {
     	const double *activity;
-    	bool compare(int a, int b);
-} greater_activity;
+    	int compare(int a, int b);
+} GreaterActivity;
 
-struct heap {
-    	VECTOR_INIT(heap);
-    	VECTOR_INIT(pos);
+struct Heap {
+    	Vector.init(heap);
+    	Vector.init(pos);
 
     	void up( int v );
     	void down( int v );
-	bool empty();
-	bool inHeap(int n);
+	int empty();
+	int inHeap(int n);
 	void update(int x);
     	void insert(int x);
     	int pop();
-} heap;
+} Heap;
 
 #endif

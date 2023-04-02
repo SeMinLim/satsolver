@@ -1,28 +1,26 @@
 #include "solver.h"
 
-#define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
-#define WatchPointer(id) (watchedPointers[vars + id])
 
-
-// Functions for parser
-char *read_whitespace( char *p ) {
+char *Solver::read_whitespace( char *p ) {
         // ASCII
         // Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
         return p;
 }
-char *read_until_new_line( char *p ) {
+
+char *Solver::read_until_new_line( char *p ) {
         while ( *p != '\n' ) {
                 if ( *p++ == '\0' ) exit(1);
         }
         return ++p;
 }
-char *read_int( char *p, int *i ) {
-        bool sym = true;
+
+char *Solver::read_int( char *p, int *i ) {
+        int sym = 1;
         *i = 0;
         p = read_whitespace(p);
         if ( *p == '-' ) {
-                sym = false;
+                sym = 0;
                 ++p;
         }
         while ( *p >= '0' && *p <= '9' ) {
@@ -34,8 +32,6 @@ char *read_int( char *p, int *i ) {
         return p;
 }
 
-
-// Functions for Solver
 int Solver::add_clause( std::vector<int> &c ) {                   
     	clause_DB.push_back(Clause(c.size()));                          
     	int id = clause_DB.size() - 1;                                

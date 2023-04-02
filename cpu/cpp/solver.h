@@ -6,6 +6,9 @@
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
 
+#define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
+#define WatchPointer(id) (watchedPointers[vars + id])
+
 
 // Heap data structure
 template<class Compare>
@@ -46,10 +49,16 @@ class Heap {
     	}
 
 public:
-    	void setComp   ( Compare c )           { lt = c; }
-    	bool empty     ()                const { return heap.size() == 0; }
-    	bool inHeap    ( int n )         const { return (n < (int)pos.size()) && (pos[n] >= 0); }
-    	void update    ( int x )               { up(pos[x]); }
+    	void setComp( Compare c ) { lt = c; }
+    	int empty() { 
+		if ( heap.size() == 0 ) return 1;
+       		else return 0;
+	}
+    	int inHeap( int n ) { 
+		if ( (n < (int)pos.size()) && (pos[n] >= 0) ) return 1;
+       		else return 0;	
+	}
+    	void update( int x ) { up(pos[x]); }
 
     	void insert( int x ) {
         	if ( (int)pos.size() < x + 1 ) pos.resize(x + 1, -1);	
@@ -95,7 +104,10 @@ public:
 // Function for soting activities
 struct GreaterActivity { 
     	const double *activity;     
-    	bool operator() ( int a, int b ) const { return activity[a] > activity[b]; }
+    	int operator() ( int a, int b ) { 
+		if ( activity[a] > activity[b] ) return 1; 
+		else return 0;
+	}
     	GreaterActivity(): activity(NULL) {}
     	GreaterActivity( const double *s ): activity(s) {}
 };
@@ -141,7 +153,10 @@ public:
     	void backtrack( int backtrack_level );                    // Backtracking
     	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation
     	int  parse( char *filename );                             // Read CNF file
-    	int  solve();                                             // Solving
+	char *read_whitespace( char *p );
+	char *read_until_new_line( char *p );
+	char *read_int( char *p, int *i );
+	int  solve();                                             // Solving
     	int  decide();                                            // Pick desicion variable
     	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
     	void bump_var( int var, double mult );                    // Update activity      

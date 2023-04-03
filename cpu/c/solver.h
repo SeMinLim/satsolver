@@ -108,9 +108,24 @@ public:
 	// Literal block distance based on Glucose
 	// LBD = How many decision variable in a learnt clause
     	int lbd;
-    	std::vector<int> literals; // Literals in this clause
+    	int literals[50]; // Literals in this clause
+	int literalsSize = 0;
     	int& operator [] ( int index ) { return literals[index]; } // Overloading array operator
-    	Clause( int sz ): lbd(0) { literals.resize(sz); } // Initialize int lbd as 0 and set a clause size with int size
+    	Clause( int sz ): lbd(0) { 
+		if ( sz == literalsSize ) {
+			literalsSize = sz;
+		} else if ( sz > literalsSize ) {
+			for ( int i = literalsSize; i < sz; i ++ ) {
+				literals[i] = -1;
+			}
+			literalsSize = sz;
+		} else {
+			for ( int i = literalsSize; i < sz; i -- ) {
+				literals[i] = -1;
+			}
+			literalsSize = sz;
+		}
+	} // Initialize int lbd as 0 and set a clause size with int size
 };
 
 
@@ -127,11 +142,12 @@ public:
 // Solver
 class Solver {
 public:
-    	std::vector<int> learnt,                        // The clause indices of the learnt clauses
-                         trail,                         // Save the assigned literal sequence(phase saving)
+    	int learnt[50]; 				// The clause indices of the learnt clauses
+	int learntSize = 0;
+	std::vector<int> trail,                         // Save the assigned literal sequence(phase saving)
                          decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
-                         reduceMap;                    // Data structure for reduce
-    	std::vector<Clause> clauseDB;                  // Clause database
+                         reduceMap;                     // Data structure for reduce
+    	std::vector<Clause> clauseDB;                   // Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
@@ -169,7 +185,7 @@ public:
 	char *read_int( char *p, int *i );
 	int  solve();                                             // Solving
     	int  decide();                                            // Pick desicion variable
-    	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
+    	int  add_clause( int c[], int size );                     // Add new clause to clause database
     	void bump_var( int var, double mult );                    // Update activity      
     	void restart();                                           // Do restart                                      
     	void reduce();                                            // Do reduce

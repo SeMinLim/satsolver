@@ -32,10 +32,10 @@ char *Solver::read_int( char *p, int *i ) {
         return p;
 }
 
-int Solver::add_clause( std::vector<int> &c ) {                   
-    	clauseDB.push_back(Clause(c.size()));                          
+int Solver::add_clause( int c[], int size ) {                   
+    	clauseDB.push_back(Clause(size));                          
     	int id = clauseDB.size() - 1;                                
-    	for ( int i = 0; i < (int)c.size(); i++ ) clauseDB[id][i] = c[i];
+    	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
         // There's two watched literals	
     	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
     	WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
@@ -55,8 +55,8 @@ int Solver::parse( char *filename ) {
 	fclose(f_data);                                             
 	data[file_len] = '\0'; // Read the file
 
-    	std::vector<int> buffer; // Save the clauses temporarily
-    	
+	int buffer[10]; // Save the clauses temporarily
+	int bufferSize;
 	while ( *p != '\0' ) {
         	p = read_whitespace(p);
         	if ( *p == '\0' ) break;
@@ -79,17 +79,16 @@ int Solver::parse( char *filename ) {
                 			printf("c PARSE ERROR(Unexpected EOF)!\n");
 					exit(1);
 				}
-				else buffer.push_back(dimacs_lit);
+				else buffer[bufferSize++] = dimacs_lit;
 			}
 			else {                                                       
-                		if ( buffer.size() == 0 ) return 20;
-				else if ( buffer.size() == 1 ) {
+                		if ( bufferSize == 0 ) return 20;
+				else if ( bufferSize == 1 ) {
 					if ( Value(buffer[0]) == -1 ) return 20;
 					else if ( !Value(buffer[0]) ) assign(buffer[0], 0, -1);
 				}
-                		else add_clause(buffer); 
-
-                		buffer.clear();                                        
+                		else add_clause(buffer, bufferSize);
+				bufferSize = 0;
             		}
         	}
     	}
@@ -177,7 +176,7 @@ int Solver::propagate() {
             		}
 			// Look for new watch pointer
 			int k;
-			int sz = c.literals.size();
+			int sz = c.literalsSize;
             		for ( k = 2; (k < sz) && (Value(c[k]) == -1); k++ ); 
 			if ( k < sz ) {                           
                 		c[1] = c[k];
@@ -218,13 +217,13 @@ void Solver::bump_var( int var, double coeff ) {
 
 int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	++time_stamp;
-    	learnt.clear();
+    	learntSize = 0;
     	Clause &c = clauseDB[conflict]; 
 	int conflictLevel = level[abs(c[0])];
 
     	if ( conflictLevel == 0 ) return 20; // UNSAT
 	else {
-		learnt.push_back(0); // Leave a place to save the first UIP
+		learnt[learntSize++] = 0; // Leave a place to save the first UIP
 		std::vector<int> bump;
 		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
 		int resolve_lit = 0; // The literal to do resolution
@@ -233,14 +232,14 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		do {
 			Clause &c = clauseDB[conflict];
 			// Mark the literals
-			for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
+			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c.literalsSize; i++ ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
 					bump_var(var, 0.5);
 					bump.push_back(var);
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
-					else learnt.push_back(c[i]);
+					else learnt[learntSize++] = c[i];
 				}
 			}
 			// Find the last marked literal in the trail to do resolution
@@ -259,7 +258,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		lbd = 0;
 		
 		// Calculate LBD
-		for ( int i = 0; i < (int)learnt.size(); i++ ) {
+		for ( int i = 0; i < learntSize; i++ ) {
 			int l = level[abs(learnt[i])];
 			if ( l && mark[l] != time_stamp ) {
 				mark[l] = time_stamp;
@@ -276,10 +275,10 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		if ( lbd_queue_pos == 50 ) lbd_queue_pos = 0;
 		slow_lbd_sum += (lbd > 50 ? 50 : lbd); // Sum of the global LBDs
 			
-		if ( learnt.size() == 1 ) backtrackLevel = 0;
+		if ( learntSize == 1 ) backtrackLevel = 0;
 		else {
 			int max_id = 1;
-			for ( int i = 2; i < (int)learnt.size(); i++ ) {
+			for ( int i = 2; i < learntSize; i++ ) {
 				if ( level[abs(learnt[i])] > level[abs(learnt[max_id])] ) max_id = i;
 			}
 			int p = learnt[max_id];
@@ -374,9 +373,9 @@ int Solver::solve() {
 			else {
 				backtrack(backtrackLevel); // backtracking
 				
-				if ( learnt.size() == 1 ) assign(learnt[0], 0, -1); // Learnt a unit clause
+				if ( learntSize == 1 ) assign(learnt[0], 0, -1); // Learnt a unit clause
 				else {
-					int cref = add_clause(learnt); // Add a clause to data base.
+					int cref = add_clause(learnt, learntSize); // Add a clause to data base.
 					clauseDB[cref].lbd = lbd;
 					assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
 				}

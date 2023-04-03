@@ -7,14 +7,14 @@
 #define Parent(x) ((x - 1) >> 1)
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
-#define WatchPointer(id) (watchedPointers[vars + id])
+#define WatchedPointers(id) (watchedPointers[vars + id])
 
 
 // Heap data structure
 template<class Compare>
 class Heap {
     	Compare lt; // If left one of 'compare function' is big, return 'True'
-    	std::vector<int> heap; // Value
+    	std::vector<int> heap; // Index of activity[x]
     	std::vector<int> pos; // Position
     
     	void up( int v ) {
@@ -119,8 +119,8 @@ public:
     	std::vector<int> learnt,                        // The clause indices of the learnt clauses
                          trail,                         // Save the assigned literal sequence(phase saving)
                          decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
-                         reduce_map;                    // Data structure for reduce
-    	std::vector<Clause> clause_DB;                  // Clause database
+                         reduceMap;                    // Data structure for reduce
+    	std::vector<Clause> clauseDB;                  // Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts

@@ -33,12 +33,12 @@ char *Solver::read_int( char *p, int *i ) {
 }
 
 int Solver::add_clause( std::vector<int> &c ) {                   
-    	clause_DB.push_back(Clause(c.size()));                          
-    	int id = clause_DB.size() - 1;                                
-    	for ( int i = 0; i < (int)c.size(); i++ ) clause_DB[id][i] = c[i];
+    	clauseDB.push_back(Clause(c.size()));                          
+    	int id = clauseDB.size() - 1;                                
+    	for ( int i = 0; i < (int)c.size(); i++ ) clauseDB[id][i] = c[i];
         // There's two watched literals	
-    	WatchPointer(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
-    	WatchPointer(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
+    	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
+    	WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
     	return id;                                                      
 }
 
@@ -93,7 +93,7 @@ int Solver::parse( char *filename ) {
             		}
         	}
     	}
-    	origin_clauses = clause_DB.size();
+    	origin_clauses = clauseDB.size();
     	return ( propagate() == -1 ? 0 : 20 );             
 }
 
@@ -147,7 +147,7 @@ int Solver::propagate() {
 	// This propagate style is fully based on MiniSAT
     	while ( propagated < (int)trail.size() ) { 
         	int p = trail[propagated++]; // 'p' is enqueued fact to propagate
-        	std::vector<WL> &ws = WatchPointer(p);
+        	std::vector<WL> &ws = WatchedPointers(p);
 		int size = ws.size();
         	int i, j;                     
         	for ( i = j = 0; i < size;  ) {
@@ -160,7 +160,7 @@ int Solver::propagate() {
             		// Make sure the false literal is 'c[1]'
 			int cref = ws[i].clauseIdx;
 			int falseLiteral = -p;
-            		Clause& c = clause_DB[cref];              
+            		Clause& c = clauseDB[cref];              
             		if ( c[0] == falseLiteral ) {
 				c[0] = c[1];
 				c[1] = falseLiteral;
@@ -180,7 +180,7 @@ int Solver::propagate() {
 			if ( k < sz ) {                           
                 		c[1] = c[k];
 				c[k] = falseLiteral;
-                		WatchPointer(-c[1]).push_back(w);
+                		WatchedPointers(-c[1]).push_back(w);
 			}         
 			else { // Did not find new watch, clause is unit under assignment
 				ws[j++] = w;
@@ -217,7 +217,7 @@ void Solver::bump_var( int var, double coeff ) {
 int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	++time_stamp;
     	learnt.clear();
-    	Clause &c = clause_DB[conflict]; 
+    	Clause &c = clauseDB[conflict]; 
 	int conflictLevel = level[abs(c[0])];
 
     	if ( conflictLevel == 0 ) return 20; // UNSAT
@@ -229,7 +229,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		int index = trail.size() - 1;
 		// First UIP learning method
 		do {
-			Clause &c = clause_DB[conflict];
+			Clause &c = clauseDB[conflict];
 			// Mark the literals
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
 				int var = abs(c[i]);
@@ -328,33 +328,33 @@ void Solver::reduce() {
     	reduces = 0;
 	reduce_limit += 512;
     	int new_size = origin_clauses;
-	int old_size = clause_DB.size();
-    	reduce_map.resize(old_size);
+	int old_size = clauseDB.size();
+    	reduceMap.resize(old_size);
 	// Random delete 50% bad clauses (LBD>=5) 
 	// Reducing based on Literal Block Distances
     	for ( int i = origin_clauses; i < old_size; i++ ) { 
-        	if ( clause_DB[i].lbd >= 5 && rand() % 2 == 0 ) reduce_map[i] = -1; // remove clause
+        	if ( clauseDB[i].lbd >= 5 && rand() % 2 == 0 ) reduceMap[i] = -1; // remove clause
         	else {
-            		if ( new_size != i ) clause_DB[new_size] = clause_DB[i];
-            		reduce_map[i] = new_size++;
+            		if ( new_size != i ) clauseDB[new_size] = clauseDB[i];
+            		reduceMap[i] = new_size++;
         	}
     	}
-    	clause_DB.resize(new_size, Clause(0));
+    	clauseDB.resize(new_size, Clause(0));
     	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
-        	int old_sz = WatchPointer(v).size();
+        	int old_sz = WatchedPointers(v).size();
 		int new_sz = 0;
 
         	for ( int i = 0; i < old_sz; i++ ) {
-            		int old_idx = WatchPointer(v)[i].clauseIdx;
-            		int new_idx = old_idx < origin_clauses ? old_idx : reduce_map[old_idx];
+            		int old_idx = WatchedPointers(v)[i].clauseIdx;
+            		int new_idx = old_idx < origin_clauses ? old_idx : reduceMap[old_idx];
             		if ( new_idx != -1 ) {
-                		WatchPointer(v)[i].clauseIdx = new_idx;
-                		if (new_sz != i) WatchPointer(v)[new_sz] = WatchPointer(v)[i];
+                		WatchedPointers(v)[i].clauseIdx = new_idx;
+                		if (new_sz != i) WatchedPointers(v)[new_sz] = WatchedPointers(v)[i];
                 		new_sz++;
             		}
         	}
-        	WatchPointer(v).resize(new_sz);
+        	WatchedPointers(v).resize(new_sz);
     	}
 }
 
@@ -375,7 +375,7 @@ int Solver::solve() {
 				if ( learnt.size() == 1 ) assign(learnt[0], 0, -1); // Learnt a unit clause
 				else {
 					int cref = add_clause(learnt); // Add a clause to data base.
-					clause_DB[cref].lbd = lbd;
+					clauseDB[cref].lbd = lbd;
 					assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
 				}
 				var_inc *= (1 / 0.8); // var_decay for locality

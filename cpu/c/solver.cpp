@@ -56,7 +56,7 @@ int Solver::parse( char *filename ) {
 	data[file_len] = '\0'; // Read the file
 
 	int buffer[10]; // Save the clauses temporarily
-	int bufferSize;
+	int bufferSize = 0;
 	while ( *p != '\0' ) {
         	p = read_whitespace(p);
         	if ( *p == '\0' ) break;

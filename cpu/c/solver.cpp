@@ -1,5 +1,7 @@
 #include "solver.h"
 
+Clause clauseDB[500000];				// Clause database
+int clauseDBSize = 0;
 
 char *Solver::read_whitespace( char *p ) {
         // ASCII
@@ -33,8 +35,8 @@ char *Solver::read_int( char *p, int *i ) {
 }
 
 int Solver::add_clause( int c[], int size ) {
-	clauseDB.push_back(Clause(size));
-    	int id = (int)clauseDB.size() - 1;                                
+    	clauseDB[clauseDBSize++] = Clause(size);
+	int id = clauseDBSize - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
         // There's two watched literals	
     	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
@@ -92,7 +94,7 @@ int Solver::parse( char *filename ) {
             		}
         	}
     	}
-    	origin_clauses = clauseDB.size();
+    	origin_clauses = clauseDBSize;
     	return ( propagate() == -1 ? 0 : 20 );             
 }
 
@@ -334,7 +336,7 @@ void Solver::reduce() {
     	reduces = 0;
 	reduce_limit += 512;
     	int new_size = origin_clauses;
-	int old_size = (int)clauseDB.size();
+	int old_size = clauseDBSize;
     	// Resize 'reduceMap'
 	if ( old_size > reduceMapSize ) {
 		for ( int i = reduceMapSize; i < old_size; i ++ ) reduceMap[i] = -1;
@@ -352,15 +354,14 @@ void Solver::reduce() {
             		reduceMap[i] = new_size++;
         	}
     	}
-    	clauseDB.resize(new_size, Clause(0));
-	/*if ( new_size > clauseDBSize ) {
+    	//clauseDB.resize(new_size, Clause(0));
+	if ( new_size > clauseDBSize ) {
 		for ( int i = clauseDBSize; i < new_size; i ++ ) clauseDB[i] = Clause(0);
-		clauseDBSize = new_size;
 	} else {
 		for ( int i = clauseDBSize; i < new_size; i -- ) clauseDB[i] = Clause(0);
-		clauseDBSize = new_size;
-	}*/
-   
+	}
+	clauseDBSize = new_size;
+
 	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
         	int old_sz = WatchedPointers(v).size();

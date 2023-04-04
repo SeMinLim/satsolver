@@ -108,7 +108,7 @@ public:
 	// Literal block distance based on Glucose
 	// LBD = How many decision variable in a learnt clause
     	int lbd;
-    	int literals[50]; // Literals in this clause
+    	int literals[40]; // Literals in this clause
 	int literalsSize = 0;
     	int& operator [] ( int index ) { return literals[index]; } // Overloading array operator
     	Clause(): lbd(0) {}
@@ -144,13 +144,13 @@ public:
 // Solver
 class Solver {
 public:
-    	int learnt[50]; 				// The clause indices of the learnt clauses
+    	int learnt[40]; 				// The clause indices of the learnt clauses
 	int learntSize = 0;
-	int trail[500]; 				// Save the assigned literal sequence(phase saving)
+	int trail[100]; 				// Save the assigned literal sequence(phase saving)
 	int trailSize = 0;
-	int decVarInTrail[500]; 			// Save the decision variables' position in trail(phase saving)
+	int decVarInTrail[50];	 			// Save the decision variables' position in trail(phase saving)
 	int decVarInTrailSize = 0;
-	int reduceMap[500000]; 				// Data structure for reduce
+	int reduceMap[65000]; 				// Data structure for reduce
 	int reduceMapSize = 0;
     	std::vector<Clause> clauseDB;			// Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses

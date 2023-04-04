@@ -55,7 +55,7 @@ int Solver::parse( char *filename ) {
 	fclose(f_data);                                             
 	data[file_len] = '\0'; // Read the file
 
-	int buffer[10]; // Save the clauses temporarily
+	int buffer[3]; // Save the clauses temporarily
 	int bufferSize = 0;
 	while ( *p != '\0' ) {
         	p = read_whitespace(p);
@@ -224,7 +224,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	if ( conflictLevel == 0 ) return 20; // UNSAT
 	else {
 		learnt[learntSize++] = 0; // Leave a place to save the first UIP
-		int bump[500];
+		int bump[80];
 		int bumpSize = 0;
 		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
 		int resolve_lit = 0; // The literal to do resolution

@@ -111,7 +111,8 @@ public:
     	int literals[50]; // Literals in this clause
 	int literalsSize = 0;
     	int& operator [] ( int index ) { return literals[index]; } // Overloading array operator
-    	Clause( int sz ): lbd(0) { 
+    	Clause(): lbd(0) {}
+	Clause( int sz ): lbd(0) { 
 		if ( sz == literalsSize ) {
 			literalsSize = sz;
 		} else if ( sz > literalsSize ) {
@@ -126,6 +127,7 @@ public:
 			literalsSize = sz;
 		}
 	} // Initialize int lbd as 0 and set a clause size with int size
+	~Clause() {}
 };
 
 
@@ -144,10 +146,13 @@ class Solver {
 public:
     	int learnt[50]; 				// The clause indices of the learnt clauses
 	int learntSize = 0;
-	std::vector<int> trail,                         // Save the assigned literal sequence(phase saving)
-                         decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
-                         reduceMap;                     // Data structure for reduce
-    	std::vector<Clause> clauseDB;                   // Clause database
+	int trail[500]; 				// Save the assigned literal sequence(phase saving)
+	int trailSize = 0;
+	int decVarInTrail[500]; 			// Save the decision variables' position in trail(phase saving)
+	int decVarInTrailSize = 0;
+	int reduceMap[500000]; 				// Data structure for reduce
+	int reduceMapSize = 0;
+    	std::vector<Clause> clauseDB;			// Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts

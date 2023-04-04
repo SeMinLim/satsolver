@@ -32,9 +32,9 @@ char *Solver::read_int( char *p, int *i ) {
         return p;
 }
 
-int Solver::add_clause( int c[], int size ) {                   
-    	clauseDB.push_back(Clause(size));                          
-    	int id = clauseDB.size() - 1;                                
+int Solver::add_clause( int c[], int size ) {
+	clauseDB.push_back(Clause(size));
+    	int id = (int)clauseDB.size() - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
         // There's two watched literals	
     	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
@@ -124,8 +124,8 @@ void Solver::assign( int literal, int l, int cref ) {
     	int var = abs(literal);
     	value[var]  = literal > 0 ? 1 : -1;
     	level[var]  = l;
-	reason[var] = cref;                                         
-    	trail.push_back(literal);
+	reason[var] = cref;
+	trail[trailSize++] = literal;
 }
 
 int Solver::decide() {      
@@ -135,18 +135,18 @@ int Solver::decide() {
         	if (vsids.empty()) return 10;
         	else next = vsids.pop();
     	}
-    	decVarInTrail.push_back(trail.size());
+	decVarInTrail[decVarInTrailSize++] = trailSize;
     	// If there's saved one(polarity), use that
 	if ( saved[next] ) next *= saved[next];
 
-    	assign(next, decVarInTrail.size(), -1);
+    	assign(next, decVarInTrailSize, -1);
     	decides++;
 	return 0;
 }
 
 int Solver::propagate() {
 	// This propagate style is fully based on MiniSAT
-    	while ( propagated < (int)trail.size() ) { 
+    	while ( propagated < trailSize ) { 
         	int p = trail[propagated++]; // 'p' is enqueued fact to propagate
         	std::vector<WL> &ws = WatchedPointers(p);
 		int size = ws.size();
@@ -224,10 +224,11 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	if ( conflictLevel == 0 ) return 20; // UNSAT
 	else {
 		learnt[learntSize++] = 0; // Leave a place to save the first UIP
-		std::vector<int> bump;
+		int bump[500];
+		int bumpSize = 0;
 		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
 		int resolve_lit = 0; // The literal to do resolution
-		int index = trail.size() - 1;
+		int index = trailSize - 1;
 		// First UIP learning method
 		do {
 			Clause &c = clauseDB[conflict];
@@ -236,7 +237,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
 					bump_var(var, 0.5);
-					bump.push_back(var);
+					bump[bumpSize++] = var;
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
 					else learnt[learntSize++] = c[i];
@@ -287,7 +288,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 			backtrackLevel = level[abs(p)];
 		}
 
-		for ( int i = 0; i < (int)bump.size(); i++ ) {   
+		for ( int i = 0; i < bumpSize; i++ ) {   
 			if ( level[bump[i]] >= backtrackLevel - 1 ) bump_var(bump[i], 1);
 		}
 	}
@@ -295,30 +296,34 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 }
 
 void Solver::backtrack( int backtrackLevel ) {
-    	if ( (int)decVarInTrail.size() <= backtrackLevel ) return;
+    	if ( decVarInTrailSize <= backtrackLevel ) return;
 	else {
-		for ( int i = trail.size() - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
+		for ( int i = trailSize - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
 			int v = abs(trail[i]);
 			value[v] = 0;
 			saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
 			if ( !vsids.inHeap(v) ) vsids.insert(v); // Update heap
 		}
 		propagated = decVarInTrail[backtrackLevel];
-		trail.resize(propagated);
-		decVarInTrail.resize(backtrackLevel);
+		// Resize 'trail'
+		for ( int i = trailSize; i < propagated; i -- ) trail[i] = -1;
+		trailSize = propagated;
+		// Resize 'decVarInTrail'
+		for ( int i = decVarInTrailSize; i < backtrackLevel; i -- ) decVarInTrail[i] = -1;
+		decVarInTrailSize = backtrackLevel;
 	}
 }
 
 void Solver::restart() {
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = 0;
-    	backtrack(decVarInTrail.size());
+    	backtrack(decVarInTrailSize);
 	restarts++;
 }
 
 void Solver::rephase() {
 	if ( (rephases / 2) == 1 ) for ( int i = 1; i <= vars; i++ ) saved[i] = local_best[i];
 	else for ( int i = 1; i <= vars; i++ ) saved[i] = -local_best[i];
-	backtrack(decVarInTrail.size());
+	backtrack(decVarInTrailSize);
 	rephase_inc *= 2;
 	rephase_limit = conflicts + rephase_inc;
 	rephases++;
@@ -329,8 +334,15 @@ void Solver::reduce() {
     	reduces = 0;
 	reduce_limit += 512;
     	int new_size = origin_clauses;
-	int old_size = clauseDB.size();
-    	reduceMap.resize(old_size);
+	int old_size = (int)clauseDB.size();
+    	// Resize 'reduceMap'
+	if ( old_size > reduceMapSize ) {
+		for ( int i = reduceMapSize; i < old_size; i ++ ) reduceMap[i] = -1;
+		reduceMapSize = old_size;
+	} else {
+		for ( int i = reduceMapSize; i < old_size; i -- ) reduceMap[i] = -1;
+		reduceMapSize = old_size;
+	}
 	// Random delete 50% bad clauses (LBD>=5) 
 	// Reducing based on Literal Block Distances
     	for ( int i = origin_clauses; i < old_size; i++ ) { 
@@ -341,7 +353,15 @@ void Solver::reduce() {
         	}
     	}
     	clauseDB.resize(new_size, Clause(0));
-    	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
+	/*if ( new_size > clauseDBSize ) {
+		for ( int i = clauseDBSize; i < new_size; i ++ ) clauseDB[i] = Clause(0);
+		clauseDBSize = new_size;
+	} else {
+		for ( int i = clauseDBSize; i < new_size; i -- ) clauseDB[i] = Clause(0);
+		clauseDBSize = new_size;
+	}*/
+   
+	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
         	int old_sz = WatchedPointers(v).size();
 		int new_sz = 0;
@@ -383,8 +403,8 @@ int Solver::solve() {
 				++conflicts, ++reduces;
 				
 				// Update the local-best phase
-				if ( (int)trail.size() > threshold ) {
-					threshold = trail.size();
+				if ( trailSize > threshold ) {
+					threshold = trailSize;
 					for ( int i = 1; i < vars + 1; i++ ) local_best[i] = value[i];
 				}
 			}

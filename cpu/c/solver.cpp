@@ -1,7 +1,11 @@
 #include "solver.h"
 
-Clause clauseDB[500000];				// Clause database
+
+Clause clauseDB[500000]; // Clause database
 int clauseDBSize = 0;
+WL watchedPointers[199][20000];
+int watchedPointersSize[199] = {0,};
+
 
 char *Solver::read_whitespace( char *p ) {
         // ASCII
@@ -39,9 +43,11 @@ int Solver::add_clause( int c[], int size ) {
 	int id = clauseDBSize - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
         // There's two watched literals	
-    	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
-    	WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
-    	return id;                                                      
+    	//WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
+    	WatchedPointers(-c[0])[WatchedPointersSize(-c[0])++] = WL(id, c[1]);
+	//WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
+	WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = WL(id, c[0]);
+	return id;                                                      
 }
 
 int Solver::parse( char *filename ) {
@@ -106,8 +112,7 @@ void Solver::alloc_memory() {
     	local_best = new int[vars + 1];
     	saved = new int[vars + 1];
     	activity = new double[vars + 1];
-    	watchedPointers = new std::vector<WL>[vars * 2 + 1]; // Two polarities
-    	
+
 	conflicts = time_stamp = propagated = restarts = rephases = reduces = threshold = 0;
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
     	var_inc = 1, rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192;
@@ -150,18 +155,17 @@ int Solver::propagate() {
 	// This propagate style is fully based on MiniSAT
     	while ( propagated < trailSize ) { 
         	int p = trail[propagated++]; // 'p' is enqueued fact to propagate
-        	std::vector<WL> &ws = WatchedPointers(p);
-		int size = ws.size();
+		int size = WatchedPointersSize(p);
         	int i, j;                     
         	for ( i = j = 0; i < size;  ) {
 			// Try to avoid inspecting the clause
-            		int blocker = ws[i].blocker;                       
+            		int blocker = WatchedPointers(p)[i].blocker;                       
 			if ( Value(blocker) == 1 ) {                
-                		ws[j++] = ws[i++]; 
+                		WatchedPointers(p)[j++] = WatchedPointers(p)[i++]; 
 				continue;
             		}
             		// Make sure the false literal is 'c[1]'
-			int cref = ws[i].clauseIdx;
+			int cref = WatchedPointers(p)[i].clauseIdx;
 			int falseLiteral = -p;
             		Clause& c = clauseDB[cref];              
             		if ( c[0] == falseLiteral ) {
@@ -173,7 +177,7 @@ int Solver::propagate() {
 			int firstWP = c[0];
 			WL w = WL(cref, firstWP);
 			if ( Value(firstWP) == 1 ) {                   
-                		ws[j++] = w; 
+                		WatchedPointers(p)[j++] = w; 
 				continue;
             		}
 			// Look for new watch pointer
@@ -183,15 +187,17 @@ int Solver::propagate() {
 			if ( k < sz ) {                           
                 		c[1] = c[k];
 				c[k] = falseLiteral;
-                		WatchedPointers(-c[1]).push_back(w);
+                		//WatchedPointers(-c[1]).push_back(w);
+				WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = w;
 			}         
 			else { // Did not find new watch, clause is unit under assignment
-				ws[j++] = w;
+				WatchedPointers(p)[j++] = w;
 				// Conflict!
                 		if ( Value(firstWP) == -1 ) { 
-                    			while ( i < size ) ws[j++] = ws[i++];
+                    			while ( i < size ) WatchedPointers(p)[j++] = WatchedPointers(p)[i++];
 					// Shrink
-                    			ws.resize(j);
+                    			//ws.resize(j);
+					WatchedPointersSize(p) = j;
                     			return cref;
                 		}
 				// Not conflict!
@@ -202,7 +208,8 @@ int Solver::propagate() {
 			}
             	}
 		// Shrink
-        	ws.resize(j);
+        	//ws.resize(j);
+		WatchedPointersSize(p) = j;
     	}
     	return -1;                                       
 }
@@ -364,7 +371,7 @@ void Solver::reduce() {
 
 	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
-        	int old_sz = WatchedPointers(v).size();
+        	int old_sz = WatchedPointersSize(v);
 		int new_sz = 0;
 
         	for ( int i = 0; i < old_sz; i++ ) {
@@ -376,7 +383,8 @@ void Solver::reduce() {
                 		new_sz++;
             		}
         	}
-        	WatchedPointers(v).resize(new_sz);
+        	//WatchedPointers(v).resize(new_sz);
+		WatchedPointersSize(v) = new_sz;
     	}
 }
 

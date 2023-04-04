@@ -8,6 +8,7 @@
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
 #define WatchedPointers(id) (watchedPointers[vars + id])
+#define WatchedPointersSize(id) (watchedPointersSize[vars + id])
 
 
 // Function for soting activities
@@ -141,9 +142,6 @@ public:
 };
 
 
-//Clause clauseDB[48500];				// Clause database
-//int clauseDBSize = 0;
-
 // Solver
 class Solver {
 public:
@@ -155,9 +153,6 @@ public:
 	int decVarInTrailSize = 0;
 	int reduceMap[65000]; 				// Data structure for reduce
 	int reduceMapSize = 0;
-    	//Clause clauseDB[48500];				// Clause database
-	//int clauseDBSize = 0;
-    	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
 	int decides, propagations;			// The number of decides and propagations

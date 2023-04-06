@@ -18,84 +18,21 @@
 typedef struct Heap {
 	const double *activity;
 	int heap[NumVars+1];
-	int heapSize = 0;
+	int heapSize;
 	int pos[NumVars+1];
-	int posSize = 0;
-
-    	void initialize( const double *a ) {
-		activity = a;
-	}
-
-	int compare( int a, int b ) {
-		if ( activity[a] > activity[b] ) return 1; 
-		else return 0;
-	}
-
-    	void up( int v ) {
-        	int x = heap[v];
-		int p = Parent(v);
-        	while ( v && compare(x, heap[p]) ) {
-       			heap[v] = heap[p];
-			pos[heap[p]] = v;
-            		v = p; 
-			p = Parent(p);
-        	}
-        	heap[v] = x;
-		pos[x] = v;
-    	}
-
-    	void down( int v ) {
-        	int x = heap[v];
-        	while ( ChildLeft(v) < heapSize ){
-			int child = (ChildRight(v) < heapSize) && compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
-				    ChildRight(v) : ChildLeft(v);
-            		if ( compare(x, heap[child]) ) break;
-			else {
-				heap[v] = heap[child];
-				pos[heap[v]] = v;
-				v = child;
-			}
-        	}
-        	heap[v] = x;
-		pos[x] = v;
-    	}
-
-	int empty() { 
-		if ( heapSize == 0 ) return 1;
-       		else return 0;
-	}
-
-	int inHeap( int n ) { 
-		if ( (n < posSize) && (pos[n] >= 0) ) return 1;
-       		else return 0;	
-	}
-
-	void update( int x ) { up(pos[x]); }
-
-    	void insert( int x ) {
-		if ( posSize < x + 1 ) {
-			for ( int i = posSize; i < x + 1; i ++ ) pos[i] = -1;
-			posSize = x + 1;
-		}
-		pos[x] = heapSize;
-		heap[heapSize] = x;
-		heapSize++;
-        	up(pos[x]); 
-    	}
-
-    	int pop() {
-        	int x = heap[0];
-        	heap[0] = heap[heapSize-1];
-		pos[heap[0]] = 0;
-		pos[x] = -1;
-		heap[heapSize-1] = -1;
-		heapSize--;
-        	if ( heapSize > 1 ) down(0);
-        	return x; 
-    	}
+	int posSize;
 } Heap;
+void heap_initialize( Heap *h, const double *a );
+int heap_compare( Heap *h, int a, int b );
+void heap_up( Heap *h, int v );
+void heap_down( Heap *h, int v );
+int heap_empty( Heap *h ); 
+int heap_inHeap( Heap *h, int n ); 
+void heap_update( Heap *h, int x );
+void heap_insert( Heap *h, int x );
+int heap_pop( Heap *h );
 
-
+		
 // Clauses
 typedef struct Clause {
     	int lbd;

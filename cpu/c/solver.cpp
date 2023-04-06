@@ -12,6 +12,83 @@ WL watchedPointers[NumVars*2+1][32*1024];
 int watchedPointersSize[NumVars*2+1] = {0,};
 
 
+// Heap data structure
+void heap_initialize( Heap *h, const double *a ) {
+	h->activity = a;
+	h->heapSize = 0;
+	h->posSize = 0;
+}
+
+int heap_compare( Heap *h, int a, int b ) {
+	if ( h->activity[a] > h->activity[b] ) return 1; 
+	else return 0;
+}
+
+void heap_up( Heap *h, int v ) {
+	int x = h->heap[v];
+	int p = Parent(v);
+        while ( v && heap_compare(h, x, h->heap[p]) ) {
+       		h->heap[v] = h->heap[p];
+		h->pos[h->heap[p]] = v;
+		v = p; 
+		p = Parent(p);
+        }
+        h->heap[v] = x;
+	h->pos[x] = v;
+}
+
+void heap_down( Heap *h, int v ) {
+	int x = h->heap[v];
+        while ( ChildLeft(v) < h->heapSize ){
+		int child = (ChildRight(v) < h->heapSize) && heap_compare(h, h->heap[ChildRight(v)], h->heap[ChildLeft(v)]) ? 
+			    ChildRight(v) : ChildLeft(v);
+		if ( heap_compare(h, x, h->heap[child]) ) break;
+		else {
+			h->heap[v] = h->heap[child];
+			h->pos[h->heap[v]] = v;
+			v = child;
+		}
+        }
+        h->heap[v] = x;
+	h->pos[x] = v;
+}
+
+int heap_empty( Heap *h ) { 
+	if ( h->heapSize == 0 ) return 1;
+	else return 0;
+}
+
+int heap_inHeap( Heap *h, int n ) { 
+	if ( (n < h->posSize) && (h->pos[n] >= 0) ) return 1;
+	else return 0;	
+}
+
+void heap_update( Heap *h, int x ) { heap_up(h, h->pos[x]); }
+
+void heap_insert( Heap *h, int x ) {
+	if ( h->posSize < x + 1 ) {
+		for ( int i = h->posSize; i < x + 1; i ++ ) h->pos[i] = -1;
+		h->posSize = x + 1;
+	}
+	h->pos[x] = h->heapSize;
+	h->heap[h->heapSize] = x;
+	h->heapSize++;
+	heap_up(h, h->pos[x]); 
+}
+
+int heap_pop( Heap *h ) {
+	int x = h->heap[0];
+        h->heap[0] = h->heap[h->heapSize-1];
+	h->pos[h->heap[0]] = 0;
+	h->pos[x] = -1;
+	h->heap[h->heapSize-1] = -1;
+	h->heapSize--;
+        if ( h->heapSize > 1 ) heap_down(h, 0);
+        return x; 
+}
+
+
+// Solver
 char *Solver::read_whitespace( char *p ) {
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
         return p;
@@ -116,10 +193,10 @@ void Solver::alloc_memory() {
     	var_inc = 1, rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192;
 
     	// Initialization
-	vsids.initialize(activity);
+	heap_initialize(&vsids, activity);
     	for (int i = 1; i <= vars; i++) {
         	value[i] = reason[i] = level[i] = mark[i] = local_best[i] = activity[i] = saved[i] = 0;
-		vsids.insert(i);
+		heap_insert(&vsids, i);
     	}
 }
 
@@ -135,8 +212,8 @@ int Solver::decide() {
     	int next = -1;
 	// Pick up a variable based on VSIDS
 	while ( next == -1 || Value(next) != 0 ) {
-        	if (vsids.empty()) return 10;
-        	else next = vsids.pop();
+        	if (heap_empty(&vsids)) return 10;
+        	else next = heap_pop(&vsids);
     	}
 	decVarInTrail[decVarInTrailSize++] = trailSize;
     	// If there's saved one(polarity), use that
@@ -215,7 +292,7 @@ void Solver::bump_var( int var, double coeff ) {
         	var_inc *= 1e-100;
 	}
 	// Update Heap
-    	if ( vsids.inHeap(var) ) vsids.update(var);
+    	if ( heap_inHeap(&vsids, var) ) heap_update(&vsids, var);
 }
 
 int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
@@ -305,7 +382,7 @@ void Solver::backtrack( int backtrackLevel ) {
 			int v = abs(trail[i]);
 			value[v] = 0;
 			saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
-			if ( !vsids.inHeap(v) ) vsids.insert(v); // Update heap
+			if ( !heap_inHeap(&vsids, v) ) heap_insert(&vsids, v); // Update heap
 		}
 		propagated = decVarInTrail[backtrackLevel];
 		// Resize 'trail'

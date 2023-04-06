@@ -14,31 +14,27 @@
 #define MaxNumLits 3
 
 
-// Function for soting activities
-typedef struct GreaterActivity { 
-    	const double *activity;     
-    	int compare ( int a, int b ) { 
-		if ( activity[a] > activity[b] ) return 1; 
-		else return 0;
-	}
-    	void initialize( const double *s ) { 
-		activity = s;
-	}
-} GreaterActivity;
-
-
 // Heap data structure
 typedef struct Heap {
-	GreaterActivity g;
+	const double *activity;
 	int heap[NumVars+1];
 	int heapSize = 0;
 	int pos[NumVars+1];
 	int posSize = 0;
-    
+
+    	void initialize( const double *a ) {
+		activity = a;
+	}
+
+	int compare( int a, int b ) {
+		if ( activity[a] > activity[b] ) return 1; 
+		else return 0;
+	}
+
     	void up( int v ) {
         	int x = heap[v];
 		int p = Parent(v);
-        	while ( v && g.compare(x, heap[p]) ) {
+        	while ( v && compare(x, heap[p]) ) {
        			heap[v] = heap[p];
 			pos[heap[p]] = v;
             		v = p; 
@@ -51,9 +47,9 @@ typedef struct Heap {
     	void down( int v ) {
         	int x = heap[v];
         	while ( ChildLeft(v) < heapSize ){
-			int child = (ChildRight(v) < heapSize) && g.compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
+			int child = (ChildRight(v) < heapSize) && compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
 				    ChildRight(v) : ChildLeft(v);
-            		if ( g.compare(x, heap[child]) ) break;
+            		if ( compare(x, heap[child]) ) break;
 			else {
 				heap[v] = heap[child];
 				pos[heap[v]] = v;
@@ -63,10 +59,6 @@ typedef struct Heap {
         	heap[v] = x;
 		pos[x] = v;
     	}
-
-	void initialize( GreaterActivity ga ) {
-		g = ga;
-	}
 
 	int empty() { 
 		if ( heapSize == 0 ) return 1;

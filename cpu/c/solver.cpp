@@ -116,9 +116,7 @@ void Solver::alloc_memory() {
     	var_inc = 1, rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192;
 
     	// Initialization
-	GreaterActivity ga;	
-	ga.initialize(activity);
-	vsids.initialize(ga);
+	vsids.initialize(activity);
     	for (int i = 1; i <= vars; i++) {
         	value[i] = reason[i] = level[i] = mark[i] = local_best[i] = activity[i] = saved[i] = 0;
 		vsids.insert(i);

@@ -89,7 +89,7 @@ void solver_assign( Solver *s, int literal, int level, int cref );
 int  solver_propagate( Solver *s );
 void solver_backtrack( Solver *s, int backtrack_level );
 int  solver_analyze( Solver *s, int cref );
-int  solver_parse( Solver *s, char *filename );
+int  solver_parse( Solver *s );
 char *read_whitespace( char *p );
 char *read_until_new_line( char *p );
 char *read_int( char *p, int *i );

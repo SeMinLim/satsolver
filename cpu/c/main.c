@@ -19,13 +19,13 @@ static inline double timeCheckerREAL() {
 }
 
 
-int main( int argc, char **argv ) {
+int main() {
         Solver s;
 
         double parseTimeInitCPU = timeCheckerCPU();
         double parseTimeInitREAL = timeCheckerREAL();
 
-        int res = solver_parse(&s, argv[1]);
+        int res = solver_parse(&s);
 
         double parseTimeFinishCPU = timeCheckerCPU();
         double parseTimeFinishREAL = timeCheckerREAL();

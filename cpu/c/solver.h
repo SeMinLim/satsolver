@@ -47,15 +47,9 @@ void clause_resize( Clause *c, int sz );
 typedef struct WL {
     	int clauseIdx;
     	int blocker;
-	void init() {
-		clauseIdx = 0;
-		blocker = 0;
-	}
-    	void set( int c, int b ) {
-		clauseIdx = c;
-		blocker = b;
-	}
 } WL;
+void wl_init( WL *w );
+void wl_set( WL *w, int c, int b );
 
 
 // Solver

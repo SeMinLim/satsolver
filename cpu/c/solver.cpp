@@ -112,6 +112,18 @@ void clause_resize( Clause *c, int sz ) {
 }
 
 
+// Watched Literals
+void wl_init( WL *w ) {
+	w->clauseIdx = 0;
+	w->blocker = 0;
+}
+
+void wl_set( WL *w, int c, int b ) {
+	w->clauseIdx = c;
+	w->blocker = b;
+}
+
+
 // Solver
 char *Solver::read_whitespace( char *p ) {
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
@@ -150,9 +162,9 @@ int Solver::add_clause( int c[], int size ) {
 	int id = clauseDBSize - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id].literals[i] = c[i];
 	WL wl;
-	wl.set(id, c[1]);
+	wl_set(&wl, id, c[1]);
     	WatchedPointers(-c[0])[WatchedPointersSize(-c[0])++] = wl;
-	wl.set(id, c[0]);
+	wl_set(&wl, id, c[0]);
 	WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = wl;
 	return id;                                                      
 }
@@ -274,7 +286,7 @@ int Solver::propagate() {
 			// If 0th watch pointer is true, then clause is already satisfied
 			int firstWP = c.literals[0];
 			WL w;
-		       	w.set(cref, firstWP);
+		       	wl_set(&w, cref, firstWP);
 			if ( Value(firstWP) == 1 ) {                   
                 		WatchedPointers(p)[j++] = w; 
 				continue;

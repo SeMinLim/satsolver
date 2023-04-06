@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <vector>
 
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
@@ -9,6 +8,10 @@
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
 #define WatchedPointers(id) (watchedPointers[vars + id])
 #define WatchedPointersSize(id) (watchedPointersSize[vars + id])
+
+#define NumVars 99
+#define NumClauses 264
+#define MaxNumLits 3
 
 
 // Function for soting activities
@@ -27,9 +30,9 @@ typedef struct GreaterActivity {
 // Heap data structure
 typedef struct Heap {
 	GreaterActivity g;
-	int heap[500];
+	int heap[NumVars+1];
 	int heapSize = 0;
-	int pos[500];
+	int pos[NumVars+1];
 	int posSize = 0;
     
     	void up( int v ) {

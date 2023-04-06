@@ -20,12 +20,12 @@ static inline double timeCheckerREAL() {
 
 
 int main( int argc, char **argv ) {
-        Solver S;
+        Solver s;
 
         double parseTimeInitCPU = timeCheckerCPU();
         double parseTimeInitREAL = timeCheckerREAL();
 
-        int res = S.parse(argv[1]);
+        int res = solver_parse(&s, argv[1]);
 
         double parseTimeFinishCPU = timeCheckerCPU();
         double parseTimeFinishREAL = timeCheckerREAL();
@@ -41,7 +41,7 @@ int main( int argc, char **argv ) {
                 double processTimeInitCPU = timeCheckerCPU();
                 double processTimeInitREAL = timeCheckerREAL();
 
-                res = S.solve();
+                res = solver_solve(&s);
                 if ( res == 10 ) {
 			printf("s SATISFIABLE\n");
                 }
@@ -55,10 +55,10 @@ int main( int argc, char **argv ) {
 
                 printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
                 printf( "Elapsed Time (REAL): %.2f\n", timeProcessREAL );
-		printf( "Conflicts: %d\n", S.conflicts );
-		printf( "Decisions: %d\n", S.decides );
-		printf( "Propagations: %d\n", S.propagations );
-		printf( "Evaluations: %d\n", S.propagations + S.decides );
+		printf( "Conflicts: %d\n", s.conflicts );
+		printf( "Decisions: %d\n", s.decides );
+		printf( "Propagations: %d\n", s.propagations );
+		printf( "Evaluations: %d\n", s.propagations + s.decides );
         }
         return 0;
 }

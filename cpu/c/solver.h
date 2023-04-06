@@ -5,9 +5,9 @@
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
 
-#define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
-#define WatchedPointers(id) (watchedPointers[vars + id])
-#define WatchedPointersSize(id) (watchedPointersSize[vars + id])
+#define Value(literal) (literal > 0 ? s->value[literal] : -s->value[-literal])
+#define WatchedPointers(id) (watchedPointers[s->vars + id])
+#define WatchedPointersSize(id) (watchedPointersSize[s->vars + id])
 
 #define NumVars 99
 #define NumClauses 264
@@ -53,12 +53,11 @@ void wl_set( WL *w, int c, int b );
 
 
 // Solver
-class Solver {
-public:
+typedef struct Solver {
 	int trail[NumVars];
-	int trailSize = 0;
+	int trailSize;
 	int decVarInTrail[NumVars/2];
-	int decVarInTrailSize = 0;
+	int decVarInTrailSize;
 
 	int vars, clauses, origin_clauses, conflicts;	
 	int decides, propagations;
@@ -82,22 +81,21 @@ public:
 
 	double activity[NumVars+1];
     	double var_inc;
-    	Heap vsids;
-     
-    	void alloc_memory();
-    	void assign( int literal, int level, int cref );
-    	int  propagate();
-    	void backtrack( int backtrack_level );
-    	int  analyze( int cref, int &backtrack_level, int &lbd );
-    	int  parse( char *filename );
-	char *read_whitespace( char *p );
-	char *read_until_new_line( char *p );
-	char *read_int( char *p, int *i );
-	int  solve();
-    	int  decide();
-    	int  add_clause( int c[], int size );
-    	void bump_var( int var, double mult );
-    	void restart();
-    	void reduce();
-    	void rephase();
-};
+    	Heap vsids; 
+} Solver;
+void solver_alloc_memory( Solver *s );
+void solver_assign( Solver *s, int literal, int level, int cref );
+int  solver_propagate( Solver *s );
+void solver_backtrack( Solver *s, int backtrack_level );
+int  solver_analyze( Solver *s, int cref, int &backtrack_level, int &lbd );
+int  solver_parse( Solver *s, char *filename );
+char *read_whitespace( char *p );
+char *read_until_new_line( char *p );
+char *read_int( char *p, int *i );
+int  solver_solve( Solver *s );
+int  solver_decide( Solver *s );
+int  solver_add_clause( Solver *s, int c[], int size );
+void solver_bump_var( Solver *s, int var, double mult );
+void solver_restart( Solver *s );
+void solver_reduce( Solver *s );
+void solver_rephase( Solver *s );

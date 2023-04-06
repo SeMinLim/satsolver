@@ -43,8 +43,7 @@ int main( int argc, char **argv ) {
 
                 res = S.solve();
                 if ( res == 10 ) {
-                         printf("s SATISFIABLE\n");
-                        S.printModel();
+			printf("s SATISFIABLE\n");
                 }
                 else if ( res == 20 ) printf("s UNSATISFIABLE\n");
 

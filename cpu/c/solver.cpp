@@ -1,15 +1,18 @@
 #include "solver.h"
 
 
-Clause clauseDB[500000]; // Clause database
+// Global variables
+int learnt[512];
+int learntSize = 0;
+int reduceMap[64*1024];
+int reduceMapSize = 0;
+Clause clauseDB[512*1024];
 int clauseDBSize = 0;
-WL watchedPointers[199][20000];
-int watchedPointersSize[199] = {0,};
+WL watchedPointers[NumVars*2+1][32*1024];
+int watchedPointersSize[NumVars*2+1] = {0,};
 
 
 char *Solver::read_whitespace( char *p ) {
-        // ASCII
-        // Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
         return p;
 }
@@ -42,10 +45,7 @@ int Solver::add_clause( int c[], int size ) {
     	clauseDB[clauseDBSize++] = Clause(size);
 	int id = clauseDBSize - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
-        // There's two watched literals	
-    	//WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
     	WatchedPointers(-c[0])[WatchedPointersSize(-c[0])++] = WL(id, c[1]);
-	//WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
 	WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = WL(id, c[0]);
 	return id;                                                      
 }
@@ -54,21 +54,21 @@ int Solver::parse( char *filename ) {
     	FILE *f_data = fopen(filename, "r");  
 
     	fseek(f_data, 0, SEEK_END);
-    	size_t file_len = ftell(f_data); // Get the file size
+    	size_t file_len = ftell(f_data);
 
 	fseek(f_data, 0, SEEK_SET);
 	char *data = new char[file_len + 1];
 	char *p = data;
 	fread(data, sizeof(char), file_len, f_data);
 	fclose(f_data);                                             
-	data[file_len] = '\0'; // Read the file
+	data[file_len] = '\0';
 
-	int buffer[3]; // Save the clauses temporarily
+	int buffer[3];
 	int bufferSize = 0;
 	while ( *p != '\0' ) {
         	p = read_whitespace(p);
         	if ( *p == '\0' ) break;
-        	if ( *p == 'c' ) p = read_until_new_line(p); // If there are some comments in CNF
+        	if ( *p == 'c' ) p = read_until_new_line(p);
        	 	else if ( *p == 'p' ) { 
             		if ( (*(p + 1) == ' ') && (*(p + 2) == 'c') && 
 			     (*(p + 3) == 'n') && (*(p + 4) == 'f') ) {
@@ -427,7 +427,3 @@ int Solver::solve() {
 	return res;
 }
 
-void Solver::printModel() {
-    	for ( int i = 1; i <= vars; i++ ) printf("%d ", value[i] * i);
-    	printf( "0\n" );
-}

@@ -61,6 +61,7 @@ typedef struct Solver {
 
 	int vars, clauses, origin_clauses, conflicts;	
 	int decides, propagations;
+	int backtracklevel, lbd;
     	int restarts, rephases, reduces;
     	int rephase_inc, rephase_limit, reduce_limit;
     	int threshold;
@@ -87,7 +88,7 @@ void solver_alloc_memory( Solver *s );
 void solver_assign( Solver *s, int literal, int level, int cref );
 int  solver_propagate( Solver *s );
 void solver_backtrack( Solver *s, int backtrack_level );
-int  solver_analyze( Solver *s, int cref, int &backtrack_level, int &lbd );
+int  solver_analyze( Solver *s, int cref );
 int  solver_parse( Solver *s, char *filename );
 char *read_whitespace( char *p );
 char *read_until_new_line( char *p );

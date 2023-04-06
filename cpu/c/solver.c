@@ -178,7 +178,7 @@ int solver_parse( Solver *s, char *filename ) {
     	size_t file_len = ftell(f_data);
 
 	fseek(f_data, 0, SEEK_SET);
-	char *data = new char[file_len + 1];
+	char *data = (char*)malloc(sizeof(char)*(file_len+1));
 	char *p = data;
 	fread(data, sizeof(char), file_len, f_data);
 	fclose(f_data);                                             
@@ -228,6 +228,8 @@ int solver_parse( Solver *s, char *filename ) {
 void solver_alloc_memory( Solver *s ) {
 	s->trailSize = s->decVarInTrailSize = 0;
 
+	s->backtracklevel = s->lbd = 0;
+
 	s->conflicts = s->decides = s->propagations = s->restarts = s->rephases = s->reduces = 0;
 	s->threshold = s->propagated = s->time_stamp = 0;
     	s->fast_lbd_sum = s->lbd_queue_size = s->lbd_queue_pos = s->slow_lbd_sum = 0;
@@ -275,13 +277,13 @@ int solver_propagate( Solver *s ) {
             		}
 			int cref = WatchedPointers(p)[i].clauseIdx;
 			int falseLiteral = -p;
-            		Clause& c = clauseDB[cref];              
-            		if ( c.literals[0] == falseLiteral ) {
-				c.literals[0] = c.literals[1];
-				c.literals[1] = falseLiteral;
+            		Clause *c = &clauseDB[cref];              
+            		if ( c->literals[0] == falseLiteral ) {
+				c->literals[0] = c->literals[1];
+				c->literals[1] = falseLiteral;
 			}
 			i++;
-			int firstWP = c.literals[0];
+			int firstWP = c->literals[0];
 			WL w;
 		       	wl_set(&w, cref, firstWP);
 			if ( Value(firstWP) == 1 ) {                   
@@ -289,12 +291,12 @@ int solver_propagate( Solver *s ) {
 				continue;
             		}
 			int k;
-			int sz = c.literalsSize;
-            		for ( k = 2; (k < sz) && (Value(c.literals[k]) == -1); k++ ); 
+			int sz = c->literalsSize;
+            		for ( k = 2; (k < sz) && (Value(c->literals[k]) == -1); k++ ); 
 			if ( k < sz ) {                           
-                		c.literals[1] = c.literals[k];
-				c.literals[k] = falseLiteral;
-				WatchedPointers(-c.literals[1])[WatchedPointersSize(-c.literals[1])++] = w;
+                		c->literals[1] = c->literals[k];
+				c->literals[k] = falseLiteral;
+				WatchedPointers(-c->literals[1])[WatchedPointersSize(-c->literals[1])++] = w;
 			} else { 
 				WatchedPointers(p)[j++] = w;
                 		if ( Value(firstWP) == -1 ) { 
@@ -321,11 +323,11 @@ void solver_bump_var( Solver *s, int var, double coeff ) {
     	if ( heap_inHeap(&s->vsids, var) ) heap_update(&s->vsids, var);
 }
 
-int solver_analyze( Solver *s, int conflict, int &backtrackLevel, int &lbd ) {
+int solver_analyze( Solver *s, int conflict ) {
     	++s->time_stamp;
     	learntSize = 0;
-    	Clause &c = clauseDB[conflict]; 
-	int conflictLevel = s->level[abs(c.literals[0])];
+    	Clause *c = &clauseDB[conflict]; 
+	int conflictLevel = s->level[abs(c->literals[0])];
 
     	if ( conflictLevel == 0 ) return 20;
 	else {
@@ -336,15 +338,15 @@ int solver_analyze( Solver *s, int conflict, int &backtrackLevel, int &lbd ) {
 		int resolve_lit = 0;
 		int index = s->trailSize - 1;
 		do {
-			Clause &c = clauseDB[conflict];
-			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c.literalsSize; i++ ) {
-				int var = abs(c.literals[i]);
+			Clause *c = &clauseDB[conflict];
+			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c->literalsSize; i++ ) {
+				int var = abs(c->literals[i]);
 				if ( s->mark[var] != s->time_stamp && s->level[var] > 0 ) {
 					solver_bump_var(s, var, 0.5);
 					bump[bumpSize++] = var;
 					s->mark[var] = s->time_stamp;
 					if ( s->level[var] >= conflictLevel ) should_visit_ct++;
-					else learnt[learntSize++] = c.literals[i];
+					else learnt[learntSize++] = c->literals[i];
 				}
 			}
 			do {
@@ -359,26 +361,26 @@ int solver_analyze( Solver *s, int conflict, int &backtrackLevel, int &lbd ) {
 
 		learnt[0] = -resolve_lit;
 		++s->time_stamp;
-		lbd = 0;
+		s->lbd = 0;
 		
 		for ( int i = 0; i < learntSize; i++ ) {
 			int l = s->level[abs(learnt[i])];
 			if ( l && s->mark[l] != s->time_stamp ) {
 				s->mark[l] = s->time_stamp;
-				++lbd;
+				++s->lbd;
 			}
 		}
 
 		if ( s->lbd_queue_size < 50 ) s->lbd_queue_size++;
 		else s->fast_lbd_sum -= s->lbd_queue[s->lbd_queue_pos];
 		
-		s->fast_lbd_sum += lbd;
-		s->lbd_queue[s->lbd_queue_pos++] = lbd;
+		s->fast_lbd_sum += s->lbd;
+		s->lbd_queue[s->lbd_queue_pos++] = s->lbd;
 		
 		if ( s->lbd_queue_pos == 50 ) s->lbd_queue_pos = 0;
-		s->slow_lbd_sum += (lbd > 50 ? 50 : lbd);
+		s->slow_lbd_sum += (s->lbd > 50 ? 50 : s->lbd);
 			
-		if ( learntSize == 1 ) backtrackLevel = 0;
+		if ( learntSize == 1 ) s->backtracklevel = 0;
 		else {
 			int max_id = 1;
 			for ( int i = 2; i < learntSize; i++ ) {
@@ -387,11 +389,11 @@ int solver_analyze( Solver *s, int conflict, int &backtrackLevel, int &lbd ) {
 			int p = learnt[max_id];
 			learnt[max_id] = learnt[1];
 			learnt[1] = p;
-			backtrackLevel = s->level[abs(p)];
+			s->backtracklevel = s->level[abs(p)];
 		}
 
 		for ( int i = 0; i < bumpSize; i++ ) {   
-			if ( s->level[bump[i]] >= backtrackLevel - 1 ) solver_bump_var(s, bump[i], 1);
+			if ( s->level[bump[i]] >= s->backtracklevel - 1 ) solver_bump_var(s, bump[i], 1);
 		}
 	}
     	return 0;
@@ -493,19 +495,19 @@ int solver_solve( Solver *s ) {
 		int cref = solver_propagate(s);
 
 		if ( cref != -1 ) {
-			int backtrackLevel = 0; 
-			int lbd = 0;
-			res = solver_analyze(s, cref, backtrackLevel, lbd);
+			s->backtracklevel = 0; 
+			s->lbd = 0;
+			res = solver_analyze(s, cref);
 			
 			if ( res == 20 ) break;
 			else {
-				solver_backtrack(s, backtrackLevel);
+				solver_backtrack(s, s->backtracklevel);
 				
 				if ( learntSize == 1 ) solver_assign(s, learnt[0], 0, -1);
 				else {
 					int cref = solver_add_clause(s, learnt, learntSize);
-					clauseDB[cref].lbd = lbd;
-					solver_assign(s, learnt[0], backtrackLevel, cref);
+					clauseDB[cref].lbd = s->lbd;
+					solver_assign(s, learnt[0], s->backtracklevel, cref);
 				}
 				s->var_inc *= (1 / 0.8);
 				++s->conflicts, ++s->reduces;

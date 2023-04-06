@@ -105,14 +105,13 @@ typedef struct Heap {
 
 
 // Clauses
-class Clause {
-public:
+typedef struct Clause {
     	int lbd;
     	int literals[64];
 	int literalsSize = 0;
-    	int& operator [] ( int index ) { return literals[index]; }
-    	Clause(): lbd(0) {}
-	Clause( int sz ): lbd(0) { 
+	void init() { lbd = 0; }
+	void resize( int sz ) {
+		lbd = 0;
 		if ( sz == literalsSize ) {
 			literalsSize = sz;
 		} else if ( sz > literalsSize ) {
@@ -127,18 +126,22 @@ public:
 			literalsSize = sz;
 		}
 	}
-	~Clause() {}
-};
+} Clause;
 
 
 // The watched literals data structure (lazy data structure)
-class WL {
-public:
+typedef struct WL {
     	int clauseIdx;
     	int blocker;
-    	WL(): clauseIdx(0), blocker(0) {}
-    	WL( int c, int b ): clauseIdx(c), blocker(b) {}
-};
+	void init() {
+		clauseIdx = 0;
+		blocker = 0;
+	}
+    	void set( int c, int b ) {
+		clauseIdx = c;
+		blocker = b;
+	}
+} WL;
 
 
 // Solver
@@ -162,14 +165,14 @@ public:
             lbd_queue_pos;
     	double fast_lbd_sum, slow_lbd_sum;
 
-    	int *value,
-            *reason,
-            *level,
-            *mark,
-            *local_best,
-            *saved;
+	int value[NumVars+1];
+	int reason[NumVars+1];
+	int level[NumVars+1];
+	int mark[NumVars+1];
+	int local_best[NumVars+1];
+	int saved[NumVars+1];
 
-    	double *activity;
+	double activity[NumVars+1];
     	double var_inc;
     	Heap vsids;
      

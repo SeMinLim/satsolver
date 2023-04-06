@@ -42,11 +42,16 @@ char *Solver::read_int( char *p, int *i ) {
 }
 
 int Solver::add_clause( int c[], int size ) {
-    	clauseDB[clauseDBSize++] = Clause(size);
+	Clause cls;
+	cls.resize(size);
+    	clauseDB[clauseDBSize++] = cls;
 	int id = clauseDBSize - 1;                                
-    	for ( int i = 0; i < size; i++ ) clauseDB[id][i] = c[i];
-    	WatchedPointers(-c[0])[WatchedPointersSize(-c[0])++] = WL(id, c[1]);
-	WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = WL(id, c[0]);
+    	for ( int i = 0; i < size; i++ ) clauseDB[id].literals[i] = c[i];
+	WL wl;
+	wl.set(id, c[1]);
+    	WatchedPointers(-c[0])[WatchedPointersSize(-c[0])++] = wl;
+	wl.set(id, c[0]);
+	WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = wl;
 	return id;                                                      
 }
 
@@ -105,14 +110,6 @@ int Solver::parse( char *filename ) {
 }
 
 void Solver::alloc_memory() {
-    	value  = new int[vars + 1];
-    	reason = new int[vars + 1];
-    	level = new int[vars + 1];
-    	mark = new int[vars + 1];
-    	local_best = new int[vars + 1];
-    	saved = new int[vars + 1];
-    	activity = new double[vars + 1];
-
 	conflicts = decides = propagations = restarts = rephases = reduces = 0;
 	threshold = propagated = time_stamp = 0;
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
@@ -169,14 +166,15 @@ int Solver::propagate() {
 			int cref = WatchedPointers(p)[i].clauseIdx;
 			int falseLiteral = -p;
             		Clause& c = clauseDB[cref];              
-            		if ( c[0] == falseLiteral ) {
-				c[0] = c[1];
-				c[1] = falseLiteral;
+            		if ( c.literals[0] == falseLiteral ) {
+				c.literals[0] = c.literals[1];
+				c.literals[1] = falseLiteral;
 			}
 			i++;
 			// If 0th watch pointer is true, then clause is already satisfied
-			int firstWP = c[0];
-			WL w = WL(cref, firstWP);
+			int firstWP = c.literals[0];
+			WL w;
+		       	w.set(cref, firstWP);
 			if ( Value(firstWP) == 1 ) {                   
                 		WatchedPointers(p)[j++] = w; 
 				continue;
@@ -184,12 +182,11 @@ int Solver::propagate() {
 			// Look for new watch pointer
 			int k;
 			int sz = c.literalsSize;
-            		for ( k = 2; (k < sz) && (Value(c[k]) == -1); k++ ); 
+            		for ( k = 2; (k < sz) && (Value(c.literals[k]) == -1); k++ ); 
 			if ( k < sz ) {                           
-                		c[1] = c[k];
-				c[k] = falseLiteral;
-                		//WatchedPointers(-c[1]).push_back(w);
-				WatchedPointers(-c[1])[WatchedPointersSize(-c[1])++] = w;
+                		c.literals[1] = c.literals[k];
+				c.literals[k] = falseLiteral;
+				WatchedPointers(-c.literals[1])[WatchedPointersSize(-c.literals[1])++] = w;
 			}         
 			else { // Did not find new watch, clause is unit under assignment
 				WatchedPointers(p)[j++] = w;
@@ -197,7 +194,6 @@ int Solver::propagate() {
                 		if ( Value(firstWP) == -1 ) { 
                     			while ( i < size ) WatchedPointers(p)[j++] = WatchedPointers(p)[i++];
 					// Shrink
-                    			//ws.resize(j);
 					WatchedPointersSize(p) = j;
                     			return cref;
                 		}
@@ -209,7 +205,6 @@ int Solver::propagate() {
 			}
             	}
 		// Shrink
-        	//ws.resize(j);
 		WatchedPointersSize(p) = j;
     	}
     	return -1;                                       
@@ -229,12 +224,12 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	++time_stamp;
     	learntSize = 0;
     	Clause &c = clauseDB[conflict]; 
-	int conflictLevel = level[abs(c[0])];
+	int conflictLevel = level[abs(c.literals[0])];
 
     	if ( conflictLevel == 0 ) return 20; // UNSAT
 	else {
 		learnt[learntSize++] = 0; // Leave a place to save the first UIP
-		int bump[80];
+		int bump[128];
 		int bumpSize = 0;
 		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
 		int resolve_lit = 0; // The literal to do resolution
@@ -244,13 +239,13 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 			Clause &c = clauseDB[conflict];
 			// Mark the literals
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c.literalsSize; i++ ) {
-				int var = abs(c[i]);
+				int var = abs(c.literals[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
 					bump_var(var, 0.5);
 					bump[bumpSize++] = var;
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
-					else learnt[learntSize++] = c[i];
+					else learnt[learntSize++] = c.literals[i];
 				}
 			}
 			// Find the last marked literal in the trail to do resolution
@@ -364,9 +359,17 @@ void Solver::reduce() {
     	}
     	//clauseDB.resize(new_size, Clause(0));
 	if ( new_size > clauseDBSize ) {
-		for ( int i = clauseDBSize; i < new_size; i ++ ) clauseDB[i] = Clause(0);
+		for ( int i = clauseDBSize; i < new_size; i ++ ) {
+			Clause cls_1;
+			cls_1.resize(0);
+			clauseDB[i] = cls_1;
+		}
 	} else {
-		for ( int i = clauseDBSize; i < new_size; i -- ) clauseDB[i] = Clause(0);
+		for ( int i = clauseDBSize; i < new_size; i -- ) {
+			Clause cls_2;
+			cls_2.resize(0);
+			clauseDB[i] = cls_2;
+		}
 	}
 	clauseDBSize = new_size;
 

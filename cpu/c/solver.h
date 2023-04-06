@@ -37,25 +37,10 @@ int heap_pop( Heap *h );
 typedef struct Clause {
     	int lbd;
     	int literals[64];
-	int literalsSize = 0;
-	void init() { lbd = 0; }
-	void resize( int sz ) {
-		lbd = 0;
-		if ( sz == literalsSize ) {
-			literalsSize = sz;
-		} else if ( sz > literalsSize ) {
-			for ( int i = literalsSize; i < sz; i ++ ) {
-				literals[i] = -1;
-			}
-			literalsSize = sz;
-		} else {
-			for ( int i = literalsSize; i < sz; i -- ) {
-				literals[i] = -1;
-			}
-			literalsSize = sz;
-		}
-	}
+	int literalsSize;
 } Clause;
+void clause_init( Clause *c );
+void clause_resize( Clause *c, int sz );
 
 
 // The watched literals data structure (lazy data structure)

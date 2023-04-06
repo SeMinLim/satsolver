@@ -88,6 +88,30 @@ int heap_pop( Heap *h ) {
 }
 
 
+// Clause
+void clause_init( Clause *c ) { 
+	c->lbd = 0;
+	c->literalsSize = 0;
+}
+	
+void clause_resize( Clause *c, int sz ) {
+	c->lbd = 0;
+	if ( sz == c->literalsSize ) {
+		c->literalsSize = sz;
+	} else if ( sz > c->literalsSize ) {
+		for ( int i = c->literalsSize; i < sz; i ++ ) {
+			c->literals[i] = -1;
+		}
+		c->literalsSize = sz;
+	} else {
+		for ( int i = c->literalsSize; i < sz; i -- ) {
+			c->literals[i] = -1;
+		}
+		c->literalsSize = sz;
+	}
+}
+
+
 // Solver
 char *Solver::read_whitespace( char *p ) {
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
@@ -120,7 +144,8 @@ char *Solver::read_int( char *p, int *i ) {
 
 int Solver::add_clause( int c[], int size ) {
 	Clause cls;
-	cls.resize(size);
+	clause_init(&cls);
+	clause_resize(&cls, size);
     	clauseDB[clauseDBSize++] = cls;
 	int id = clauseDBSize - 1;                                
     	for ( int i = 0; i < size; i++ ) clauseDB[id].literals[i] = c[i];
@@ -436,13 +461,13 @@ void Solver::reduce() {
 	if ( new_size > clauseDBSize ) {
 		for ( int i = clauseDBSize; i < new_size; i ++ ) {
 			Clause cls_1;
-			cls_1.resize(0);
+			clause_resize(&cls_1, 0);
 			clauseDB[i] = cls_1;
 		}
 	} else {
 		for ( int i = clauseDBSize; i < new_size; i -- ) {
 			Clause cls_2;
-			cls_2.resize(0);
+			clause_resize(&cls_2, 0);
 			clauseDB[i] = cls_2;
 		}
 	}

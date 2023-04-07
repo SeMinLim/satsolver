@@ -119,8 +119,8 @@ public:
     	std::vector<int> learnt,                        // The clause indices of the learnt clauses
                          trail,                         // Save the assigned literal sequence(phase saving)
                          decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
-                         reduceMap;                    // Data structure for reduce
-    	std::vector<Clause> clauseDB;                  // Clause database
+                         reduceMap;                     // Data structure for reduce
+    	std::vector<Clause> clauseDB;                   // Clause database
     	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
@@ -134,7 +134,7 @@ public:
     	int lbd_queue[50],                              // Circled queue saved the recent 50 LBDs
             lbd_queue_size,                             // The number of LBDs in this queue
             lbd_queue_pos;                              // The position to save the next LBD
-    	double fast_lbd_sum, slow_lbd_sum;              // Sum of the global and recent 50 LBDs
+    	long long fast_lbd_sum, slow_lbd_sum;           // Sum of the global and recent 50 LBDs
 
     	int *value,                                     // The variable assignement (1:True; -1:False; 0:Undefine) 
             *reason,                                    // The index of the clause that implies the variable assignment

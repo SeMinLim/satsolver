@@ -228,7 +228,7 @@ int solver_parse( Solver *s ) {
 	int bufferSize = 0;
 	s->vars = NumVars;
 	s->clauses = NumClauses;
-	solver_alloc_memory(s);
+	solver_init(s);
 	for ( int i = 0; i < NumClauses; i ++) {
 		for ( int j = 0; j < MaxNumLits; j ++ ) {
 			buffer[j] = benchmark[i][j];
@@ -240,7 +240,7 @@ int solver_parse( Solver *s ) {
     	return ( solver_propagate(s) == -1 ? 0 : 20 );             
 }
 
-void solver_alloc_memory( Solver *s ) {
+void solver_init( Solver *s ) {
 	s->trailSize = s->decVarInTrailSize = 0;
 
 	s->backtracklevel = s->lbd = 0;

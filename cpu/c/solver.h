@@ -73,7 +73,7 @@ typedef struct Solver {
     	int lbd_queue[50],
             lbd_queue_size,
             lbd_queue_pos;
-    	double fast_lbd_sum, slow_lbd_sum;
+    	int fast_lbd_sum, slow_lbd_sum;
 
 	int value[NumVars+1];
 	int reason[NumVars+1];
@@ -86,7 +86,7 @@ typedef struct Solver {
     	double var_inc;
     	Heap vsids; 
 } Solver;
-void solver_alloc_memory( Solver *s );
+void solver_init( Solver *s );
 void solver_assign( Solver *s, int literal, int level, int cref );
 int  solver_propagate( Solver *s );
 void solver_backtrack( Solver *s, int backtrack_level );

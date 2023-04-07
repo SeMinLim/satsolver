@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
@@ -14,6 +13,9 @@
 #define MaxNumLits 3
 
 
+// Etc
+unsigned int randNum();
+int absValue( int n );
 // Heap data structure
 typedef struct Heap {
 	const double *activity;
@@ -90,9 +92,6 @@ int  solver_propagate( Solver *s );
 void solver_backtrack( Solver *s, int backtrack_level );
 int  solver_analyze( Solver *s, int cref );
 int  solver_parse( Solver *s );
-char *read_whitespace( char *p );
-char *read_until_new_line( char *p );
-char *read_int( char *p, int *i );
 int  solver_solve( Solver *s );
 int  solver_decide( Solver *s );
 int  solver_add_clause( Solver *s, int c[], int size );

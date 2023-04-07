@@ -13,9 +13,6 @@
 #define MaxNumLits 3
 
 
-// Etc
-unsigned int randNum();
-int absValue( int n );
 // Heap data structure
 typedef struct Heap {
 	const double *activity;
@@ -99,3 +96,9 @@ void solver_bump_var( Solver *s, int var, double mult );
 void solver_restart( Solver *s );
 void solver_reduce( Solver *s );
 void solver_rephase( Solver *s );
+
+
+// Etc
+unsigned int rand_generator();
+int abs_value( int n );
+void *mem_cpy( Clause *dest, Clause *src );

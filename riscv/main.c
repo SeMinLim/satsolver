@@ -1,13 +1,12 @@
 #include "solver.h"
 
-
 char volatile * const printchar = (char*)0xfff;
 
+// Main
+int main() {
+        Solver s;
 
-int main( int argc, char **argv ) {
-        Solver S;
-
-        int res = S.parse(argv[1]);
+        int res = solver_parse(&s);
 
         if ( res == 20 ) {
 		//printf("s UNSATISFIABLE\n");
@@ -27,9 +26,9 @@ int main( int argc, char **argv ) {
 		(*printchar) = 0x0a; // \n
 	}
         else {
-                res = S.solve();
+		res = solver_solve(&s);
                 if ( res == 10 ) {
-                        //printf("s SATISFIABLE\n");
+			//printf("s SATISFIABLE\n");
 			(*printchar) = 0x53; // S
 			(*printchar) = 0x41; // A
 			(*printchar) = 0x54; // T

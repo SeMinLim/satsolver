@@ -1,6 +1,6 @@
 MEMORY
 {
-    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 64 KB */
+    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 32M /* 32 MB */
 }
 SECTIONS
 {

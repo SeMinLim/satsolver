@@ -2,9 +2,12 @@
 
 
 // Etc
+// Additional funcs for reading CNF file
 char *read_whitespace( char *p ) {
         // ASCII
-        // Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space
+        // Horizontal tab, line feed or new line,
+	// vertical tab, form feed or new page, 
+	// carriage return, space
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
         return p;
 }
@@ -35,42 +38,174 @@ char *read_int( char *p, int *i ) {
 
 
 // Solver
+// Allocate memory and initialize the values
+void Solver::initialize() {
+    	value  = new int[vars + 1];
+    	reason = new int[vars + 1];
+    	level = new int[vars + 1];
+    	mark = new int[vars + 1];
+    	local_best = new int[vars + 1];
+    	saved = new int[vars + 1];
+    	activity = new double[vars + 1];
+    	watched_literals = new std::vector<WL>[vars * 2 + 1]; // Two polarities
+    	
+	conflicts = decides = propagations = 0;
+	restarts = rephases = reduces = 0;
+    	threshold = propagated = time_stamp = 0;
+	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
+
+    	var_inc = 1;
+	rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192; // Heuristics
+
+	vsids.initialize(activity);
+    	for (int i = 1; i <= vars; i++) {
+        	value[i] = reason[i] = level[i] = mark[i] = local_best[i] = activity[i] = saved[i] = 0;
+		vsids.insert(i);
+    	}
+}
+
+// Assign true value to a certain literal
+void Solver::assign( int literal, int l, int cref ) {
+    	int var = abs(literal);
+	// Only make it ture
+	// The same literal but has opposite polarity gonna be false
+    	value[var]  = literal > 0 ? 1 : -1;
+    	level[var]  = l;
+	reason[var] = cref;                                         
+    	trail.push_back(literal);
+}
+
+// Add a clause to the database
 int Solver::add_clause( std::vector<int> &c ) {                   
     	clauseDB.push_back(Clause(c.size()));                          
-    	int id = clauseDB.size() - 1;                                
+    	
+	int id = clauseDB.size() - 1;                                
     	for ( int i = 0; i < (int)c.size(); i++ ) clauseDB[id][i] = c[i];
-        // There's two watched literals	
-    	WatchedPointers(-c[0]).push_back(WL(id, c[1])); // watchedPointers[vars-c[0]]                      
-    	WatchedPointers(-c[1]).push_back(WL(id, c[0])); // watchedPointers[vars-c[1]]
+        
+	// There's two watched literals
+	// Store each of two literals to the array of its opposite one
+	// We only assign True value
+	// If we assign c[0] as true, the only concern is -c[0]
+	// c[1] is a blocker for c[0] and vice versa
+    	WatchedLiterals(-c[0]).push_back(WL(id, c[1])); // watched_literals[vars-c[0]]                      
+    	WatchedLiterals(-c[1]).push_back(WL(id, c[0])); // watched_literals[vars-c[1]]
+
     	return id;                                                      
 }
 
+// BCP (Boolean Constraint Propagation)
+int Solver::propagate() {
+	// This propagate style is fully based on MiniSAT
+    	while ( propagated < (int)trail.size() ) { 
+		// 'p' is already assigned as true
+		// We now gonna only concern '-p'
+        	int p = trail[propagated++];
+        	// Take an array of '-p'
+		std::vector<WL> &ws = WatchedLiterals(p);
+		// Check all clauses that contains '-p'
+		int size = ws.size();
+		int i, j;
+		for ( i = j = 0; i < size;  ) {
+			// To make the BCP progess fast
+			// Check whether a clause is already satisfied via blocker
+			// If then, move to the next clause that has '-p'
+            		int blocker = ws[i].blocker;                       
+			if ( Value(blocker) == 1 ) {                
+                		ws[j++] = ws[i++]; 
+				continue;
+            		}
+			// We only take care of the position c[0], c[1]
+			// If we have to find a new wathced literal,
+			// We gonna move the literal's position to c[1]
+            		// Make sure the false literal is 'c[1]'
+			int cref = ws[i].clauseIdx;
+			Clause& c = clauseDB[cref];
+			int falseLiteral = -p; 
+            		if ( c[0] == falseLiteral ) {
+				c[0] = c[1];
+				c[1] = falseLiteral;
+			}
+			i++;
+			// Let's first check 0th watched literal
+			// If 0th watched literal is true, then clause is already satisfied
+			int firstWP = c[0];
+			WL w = WL(cref, firstWP);
+			if ( Value(firstWP) == 1 ) {                   
+                		ws[j++] = w; 
+				continue;
+            		}
+			// Look for a new watched literal in this clause
+			int k;
+			int sz = c.literals.size();
+            		for ( k = 2; (k < sz) && (Value(c[k]) == -1); k++ ); 
+			if ( k < sz ) {
+				// Find it!
+				// Move '-p' to the last position that has also false value
+                		c[1] = c[k];
+				c[k] = falseLiteral;
+				// Make c[0] as blocker
+                		WatchedLiterals(-c[1]).push_back(w);
+			} else { 
+				// Couldn't find a new watched literal
+				// then, clause is unit under assignment
+				ws[j++] = w;
+				// Conflict!
+				// This means all literals are false
+				// including c[0] and '-p'
+                		if ( Value(firstWP) == -1 ) { 
+                    			while ( i < size ) ws[j++] = ws[i++];
+					// Shrink
+                    			ws.resize(j);
+					// Return the index of clause
+                    			return cref;
+                		}
+				// Not conflict!
+				// then, assign!
+                		else {
+					assign(firstWP, level[abs(p)], cref);
+					propagations++;
+				}
+			}
+            	}
+		// Shrink
+        	ws.resize(j);
+    	}
+    	return -1;                                       
+}
+
+// Read CNF file
 int Solver::parse( char *filename ) {
     	FILE *f_data = fopen(filename, "r");  
 
+	// Get the file size first
     	fseek(f_data, 0, SEEK_END);
-    	size_t file_len = ftell(f_data); // Get the file size
+    	size_t file_len = ftell(f_data);
 
+	// Then read the file
 	fseek(f_data, 0, SEEK_SET);
 	char *data = new char[file_len + 1];
 	char *p = data;
 	fread(data, sizeof(char), file_len, f_data);
 	fclose(f_data);                                             
-	data[file_len] = '\0'; // Read the file
+	data[file_len] = '\0';
 
-    	std::vector<int> buffer; // Save the clauses temporarily
-    	
+	// Save a clause temporarily to go to the database
+    	std::vector<int> buffer;
+
+	// Parse the file
 	while ( *p != '\0' ) {
         	p = read_whitespace(p);
-        	if ( *p == '\0' ) break;
-        	if ( *p == 'c' ) p = read_until_new_line(p); // If there are some comments in CNF
+        	
+		if ( *p == '\0' ) break;
+		// If there are some comments in CNF file
+        	if ( *p == 'c' ) p = read_until_new_line(p);
        	 	else if ( *p == 'p' ) { 
             		if ( (*(p + 1) == ' ') && (*(p + 2) == 'c') && 
 			     (*(p + 3) == 'n') && (*(p + 4) == 'f') ) {
                 		p += 5; 
 				p = read_int(p, &vars); 
 				p = read_int(p, &clauses);
-                		alloc_memory();
+                		initialize();
             		} 
             		else printf("PARSE ERROR(Unexpected Char)!\n"), exit(2);
         	}
@@ -100,114 +235,25 @@ int Solver::parse( char *filename ) {
     	return ( propagate() == -1 ? 0 : 20 );             
 }
 
-void Solver::alloc_memory() {
-    	value  = new int[vars + 1];
-    	reason = new int[vars + 1];
-    	level = new int[vars + 1];
-    	mark = new int[vars + 1];
-    	local_best = new int[vars + 1];
-    	saved = new int[vars + 1];
-    	activity = new double[vars + 1];
-    	watchedPointers = new std::vector<WL>[vars * 2 + 1]; // Two polarities
-    	
-	conflicts = time_stamp = propagated = restarts = rephases = reduces = threshold = 0;
-    	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
-    	var_inc = 1, rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192;
-
-    	// Initialization	
-	vsids.initialize(activity);
-    	for (int i = 1; i <= vars; i++) {
-        	value[i] = reason[i] = level[i] = mark[i] = local_best[i] = activity[i] = saved[i] = 0;
-		vsids.insert(i);
-    	}
-}
-
-void Solver::assign( int literal, int l, int cref ) {
-    	int var = abs(literal);
-    	value[var]  = literal > 0 ? 1 : -1;
-    	level[var]  = l;
-	reason[var] = cref;                                         
-    	trail.push_back(literal);
-}
-
+// Pick decision variable based on VSIDS
 int Solver::decide() {      
     	int next = -1;
-	// Pick up a variable based on VSIDS
 	while ( next == -1 || Value(next) != 0 ) {
         	if (vsids.empty()) return 10;
         	else next = vsids.pop();
     	}
     	decVarInTrail.push_back(trail.size());
-    	// If there's saved one(polarity), use that
+    	
+	// If there's saved one (polarity), use that
 	if ( saved[next] ) next *= saved[next];
-
     	assign(next, decVarInTrail.size(), -1);
+
     	decides++;
 	return 0;
 }
 
-int Solver::propagate() {
-	// This propagate style is fully based on MiniSAT
-    	while ( propagated < (int)trail.size() ) { 
-        	int p = trail[propagated++]; // 'p' is enqueued fact to propagate
-        	std::vector<WL> &ws = WatchedPointers(p);
-		int size = ws.size();
-        	int i, j;                     
-        	for ( i = j = 0; i < size;  ) {
-			// Try to avoid inspecting the clause
-            		int blocker = ws[i].blocker;                       
-			if ( Value(blocker) == 1 ) {                
-                		ws[j++] = ws[i++]; 
-				continue;
-            		}
-            		// Make sure the false literal is 'c[1]'
-			int cref = ws[i].clauseIdx;
-			int falseLiteral = -p;
-            		Clause& c = clauseDB[cref];              
-            		if ( c[0] == falseLiteral ) {
-				c[0] = c[1];
-				c[1] = falseLiteral;
-			}
-			i++;
-			// If 0th watch pointer is true, then clause is already satisfied
-			int firstWP = c[0];
-			WL w = WL(cref, firstWP);
-			if ( Value(firstWP) == 1 ) {                   
-                		ws[j++] = w; 
-				continue;
-            		}
-			// Look for new watch pointer
-			int k;
-			int sz = c.literals.size();
-            		for ( k = 2; (k < sz) && (Value(c[k]) == -1); k++ ); 
-			if ( k < sz ) {                           
-                		c[1] = c[k];
-				c[k] = falseLiteral;
-                		WatchedPointers(-c[1]).push_back(w);
-			}         
-			else { // Did not find new watch, clause is unit under assignment
-				ws[j++] = w;
-				// Conflict!
-                		if ( Value(firstWP) == -1 ) { 
-                    			while ( i < size ) ws[j++] = ws[i++];
-					// Shrink
-                    			ws.resize(j);
-                    			return cref;
-                		}
-				// Not conflict!
-                		else {
-					assign(firstWP, level[abs(p)], cref);
-					propagations++;
-				}
-			}
-            	}
-		// Shrink
-        	ws.resize(j);
-    	}
-    	return -1;                                       
-}
-
-void Solver::bump_var( int var, double coeff ) {
+// Update activity
+void Solver::update_score( int var, double coeff ) {
 	// Update score and prevent float overflow
     	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
         	for ( int i = 1; i <= vars; i++ ) activity[i] *= 1e-100;
@@ -217,7 +263,15 @@ void Solver::bump_var( int var, double coeff ) {
     	if ( vsids.inHeap(var) ) vsids.update(var);
 }
 
+// Conflict analysis
 int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
+	// This analysis is based on 'First UIP Learning Method'
+	// Unit Implication Points
+	// The main motivation for identifying UIPs is to reduce the size of learnt clauses
+	// In the implication graph, 
+	// there is a UIP at decision level d,
+	// when the number of literals in intermediate clause
+	// assigned at decision level d is 1
     	++time_stamp;
     	learnt.clear();
     	Clause &c = clauseDB[conflict]; 
@@ -225,19 +279,25 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 
     	if ( conflictLevel == 0 ) return 20; // UNSAT
 	else {
-		learnt.push_back(0); // Leave a place to save the first UIP
-		std::vector<int> bump;
-		int should_visit_ct = 0; // The number of literals that have not visited in the conflict level of the implication graph
-		int resolve_lit = 0; // The literal to do resolution
+		// Leave a place to save the first UIP
+		learnt.push_back(0);
+		// # of literals 
+		// that have not visited
+		// in the conflict level of the implication graph
+		int should_visit_ct = 0;
+		// The literal to do resolution
+		int resolve_lit = 0;
 		int index = trail.size() - 1;
-		// First UIP learning method
+
+		std::vector<int> bump;
 		do {
+			// First UIP learning method
 			Clause &c = clauseDB[conflict];
 			// Mark the literals
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
-					bump_var(var, 0.5);
+					update_score(var, 0.5);
 					bump.push_back(var);
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
@@ -271,11 +331,13 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		if ( lbd_queue_size < 50 ) lbd_queue_size++;
 		else fast_lbd_sum -= lbd_queue[lbd_queue_pos];
 		
-		fast_lbd_sum += lbd; // Sum of the recent 50 LBDs
+		// Sum of the recent 50 LBDs
+		fast_lbd_sum += lbd;
 		lbd_queue[lbd_queue_pos++] = lbd;
 		
+		// Sum of the global LBDs
 		if ( lbd_queue_pos == 50 ) lbd_queue_pos = 0;
-		slow_lbd_sum += (lbd > 50 ? 50 : lbd); // Sum of the global LBDs
+		slow_lbd_sum += (lbd > 50 ? 50 : lbd);
 			
 		if ( learnt.size() == 1 ) backtrackLevel = 0;
 		else {
@@ -290,7 +352,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		}
 
 		for ( int i = 0; i < (int)bump.size(); i++ ) {   
-			if ( level[bump[i]] >= backtrackLevel - 1 ) bump_var(bump[i], 1);
+			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 1);
 		}
 	}
     	return 0;
@@ -345,19 +407,19 @@ void Solver::reduce() {
     	clauseDB.resize(new_size, Clause(0));
     	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
         	if ( v == 0 ) continue;
-        	int old_sz = WatchedPointers(v).size();
+        	int old_sz = WatchedLiterals(v).size();
 		int new_sz = 0;
 
         	for ( int i = 0; i < old_sz; i++ ) {
-            		int old_idx = WatchedPointers(v)[i].clauseIdx;
+            		int old_idx = WatchedLiterals(v)[i].clauseIdx;
             		int new_idx = old_idx < origin_clauses ? old_idx : reduceMap[old_idx];
             		if ( new_idx != -1 ) {
-                		WatchedPointers(v)[i].clauseIdx = new_idx;
-                		if (new_sz != i) WatchedPointers(v)[new_sz] = WatchedPointers(v)[i];
+                		WatchedLiterals(v)[i].clauseIdx = new_idx;
+                		if (new_sz != i) WatchedLiterals(v)[new_sz] = WatchedLiterals(v)[i];
                 		new_sz++;
             		}
         	}
-        	WatchedPointers(v).resize(new_sz);
+        	WatchedLiterals(v).resize(new_sz);
     	}
 }
 

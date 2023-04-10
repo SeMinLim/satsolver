@@ -8,7 +8,7 @@
 #define Parent(x) ((x - 1) >> 1)
 
 #define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
-#define WatchedPointers(id) (watchedPointers[vars + id])
+#define WatchedLiterals(id) (watched_literals[vars + id])
 
 
 // Heap data structure (max heap)
@@ -119,7 +119,7 @@ public:
                          decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
                          reduceMap;                     // Data structure for reduce
     	std::vector<Clause> clauseDB;                   // Clause database
-    	std::vector<WL> *watchedPointers;               // A mapping from literal to clauses
+    	std::vector<WL> *watched_literals;              // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
 	int decides, propagations;			// The number of decides and propagations
@@ -145,14 +145,14 @@ public:
     	double var_inc;                                 // Parameter for VSIDS     
     	Heap vsids;					// Heap to select variable
 
-    	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
+	void initialize();                                        // Allocate memory and initialize the values 
+    	void assign( int literal, int level, int cref );          // Assign true value to a certain literal
+	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
     	int  parse( char *filename );                             // Read CNF file
-	void alloc_memory();                                      // Allocate memory 
-    	void assign( int literal, int level, int cref );          // Assigned a variable
-    	int  decide();                                            // Pick desicion variable
+    	int  decide();                                            // Pick decision variable based on VSIDS
 	int  propagate();                                         // BCP (Boolean Contraint Propagation)
     	void update_score( int var, double mult );                // Update activity
-    	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation
+    	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analysis
 	void backtrack( int backtrack_level );                    // Backtracking
     	void restart();                                           // Do restart
     	void rephase();                                           // Do rephase

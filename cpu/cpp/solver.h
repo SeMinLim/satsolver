@@ -153,9 +153,6 @@ public:
     	void backtrack( int backtrack_level );                    // Backtracking
     	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation
     	int  parse( char *filename );                             // Read CNF file
-	char *read_whitespace( char *p );
-	char *read_until_new_line( char *p );
-	char *read_int( char *p, int *i );
 	int  solve();                                             // Solving
     	int  decide();                                            // Pick desicion variable
     	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
@@ -165,3 +162,9 @@ public:
     	void rephase();                                           // Do rephase
     	void printModel();                                        // Print model when the result is SAT
 };
+
+
+// Etc
+char *read_whitespace( char *p );
+char *read_until_new_line( char *p );
+char *read_int( char *p, int *i );

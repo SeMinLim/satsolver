@@ -1,21 +1,22 @@
 #include "solver.h"
 
 
-char *Solver::read_whitespace( char *p ) {
+// Etc
+char *read_whitespace( char *p ) {
         // ASCII
         // Horizontal tab, line feed or new line, vertical tab, form feed or new page, carriage return, space
         while ( (*p >= 9 && *p <= 13) || *p == 32 ) ++p;
         return p;
 }
 
-char *Solver::read_until_new_line( char *p ) {
+char *read_until_new_line( char *p ) {
         while ( *p != '\n' ) {
                 if ( *p++ == '\0' ) exit(1);
         }
         return ++p;
 }
 
-char *Solver::read_int( char *p, int *i ) {
+char *read_int( char *p, int *i ) {
         int sym = 1;
         *i = 0;
         p = read_whitespace(p);
@@ -32,6 +33,8 @@ char *Solver::read_int( char *p, int *i ) {
         return p;
 }
 
+
+// Solver
 int Solver::add_clause( std::vector<int> &c ) {                   
     	clauseDB.push_back(Clause(c.size()));                          
     	int id = clauseDB.size() - 1;                                

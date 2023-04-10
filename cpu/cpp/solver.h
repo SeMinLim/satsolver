@@ -11,7 +11,7 @@
 #define WatchedPointers(id) (watchedPointers[vars + id])
 
 
-// Heap data structure
+// Heap data structure (max heap)
 class Heap {
     	const double *activity; // Pointer to activity database
     	std::vector<int> heap; // Index of activity[x]
@@ -37,7 +37,8 @@ class Heap {
         	int x = heap[v];
         	while ( ChildLeft(v) < (int)heap.size() ){
             		// Pick the bigger one among left and right child
-			int child = (ChildRight(v) < (int)heap.size()) && compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
+			int child = (ChildRight(v) < (int)heap.size()) && 
+				    compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
 				    ChildRight(v) : ChildLeft(v);
             		if ( compare(x, heap[child]) ) break;
 			else {
@@ -80,23 +81,31 @@ public:
 };
 
 
-// Clauses
+// Clause
 class Clause {
 public:
 	// Literal block distance based on Glucose
 	// LBD = How many decision variable in a learnt clause
     	int lbd;
-    	std::vector<int> literals; // Literals in this clause
-    	int& operator [] ( int index ) { return literals[index]; } // Overloading array operator
-    	Clause( int sz ): lbd(0) { literals.resize(sz); } // Initialize int lbd as 0 and set a clause size with int size
+    	// Literals in a clause
+	std::vector<int> literals;
+	// Overloading array operator
+	// Return a certain literal in a clause
+    	int& operator [] ( int index ) { return literals[index]; }
+	// Initialize literal block distance value as 0
+	// Resize literal array size
+    	Clause( int sz ): lbd(0) { literals.resize(sz); }
 };
 
 
-// The watched literals data structure (lazy data structure)
+// Watcher list
 class WL {
 public:
-    	int clauseIdx; // Clause index in clause database
-    	int blocker; // To fast guess whether a clause is already satisfied. 
+	// Which clause a watched literal is included
+	// A index of a clause in ClauseDB
+    	int clauseIdx;
+	// A flag for check whether a clause is already satisfied or not
+    	int blocker;
     	WL(): clauseIdx(0), blocker(0) {}
     	WL( int c, int b ): clauseIdx(c), blocker(b) {}
 };
@@ -105,7 +114,7 @@ public:
 // Solver
 class Solver {
 public:
-    	std::vector<int> learnt,                        // The clause indices of the learnt clauses
+    	std::vector<int> learnt,                        // The index of the learnt clauses
                          trail,                         // Save the assigned literal sequence(phase saving)
                          decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
                          reduceMap;                     // Data structure for reduce
@@ -135,25 +144,26 @@ public:
     	double *activity;                               // The variables' score for VSIDS
     	double var_inc;                                 // Parameter for VSIDS     
     	Heap vsids;					// Heap to select variable
-     
-    	void alloc_memory();                                      // Allocate memory 
-    	void assign( int literal, int level, int cref );          // Assigned a variable
-    	int  propagate();                                         // BCP (Boolean Contraint Propagation)
-    	void backtrack( int backtrack_level );                    // Backtracking
-    	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation
-    	int  parse( char *filename );                             // Read CNF file
-	int  solve();                                             // Solving
-    	int  decide();                                            // Pick desicion variable
+
     	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
-    	void bump_var( int var, double mult );                    // Update activity      
-    	void restart();                                           // Do restart                                      
-    	void reduce();                                            // Do reduce
+    	int  parse( char *filename );                             // Read CNF file
+	void alloc_memory();                                      // Allocate memory 
+    	void assign( int literal, int level, int cref );          // Assigned a variable
+    	int  decide();                                            // Pick desicion variable
+	int  propagate();                                         // BCP (Boolean Contraint Propagation)
+    	void update_score( int var, double mult );                // Update activity
+    	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analyzation
+	void backtrack( int backtrack_level );                    // Backtracking
+    	void restart();                                           // Do restart
     	void rephase();                                           // Do rephase
+    	void reduce();                                            // Do reduce
+	int  solve();                                             // Solver
     	void printModel();                                        // Print model when the result is SAT
 };
 
 
 // Etc
+// Additional funcs for reading CNF file
 char *read_whitespace( char *p );
 char *read_until_new_line( char *p );
 char *read_int( char *p, int *i );

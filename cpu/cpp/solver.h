@@ -134,7 +134,7 @@ public:
     	int lbd_queue[50],                              // Circled queue saved the recent 50 LBDs
             lbd_queue_size,                             // The number of LBDs in this queue
             lbd_queue_pos;                              // The position to save the next LBD
-    	unsigned long long fast_lbd_sum, slow_lbd_sum;  // Sum of the global and recent 50 LBDs
+    	double fast_lbd_sum, slow_lbd_sum;		// Sum of the global and recent 50 LBDs
 
     	int *value,                                     // The variable assignement (1:True; -1:False; 0:Undefine) 
             *reason,                                    // The index of the clause that implies the variable assignment

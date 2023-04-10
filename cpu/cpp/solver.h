@@ -11,17 +11,21 @@
 
 
 // Heap data structure
-template<class Compare>
 class Heap {
-    	Compare lt; // If left one of 'compare function' is big, return 'True'
+    	const double *activity; // Pointer to activity database
     	std::vector<int> heap; // Index of activity[x]
-    	std::vector<int> pos; // Position
-    
+    	std::vector<int> pos; // Actual position of heap
+
+	int compare( int a, int b ) {
+		if ( activity[a] > activity[b] ) return 1;
+		else return 0;
+	}
+
     	void up( int v ) {
         	int x = heap[v];
 		int p = Parent(v);
 		// Child > Parent -> True
-        	while ( v && lt(x, heap[p]) ) {
+        	while ( v && compare(x, heap[p]) ) {
        			heap[v] = heap[p];
 			pos[heap[p]] = v;
             		v = p; 
@@ -35,9 +39,9 @@ class Heap {
         	int x = heap[v];
         	while ( ChildLeft(v) < (int)heap.size() ){
             		// Pick the bigger one among left and right child
-			int child = (ChildRight(v) < (int)heap.size()) && lt(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
+			int child = (ChildRight(v) < (int)heap.size()) && compare(heap[ChildRight(v)], heap[ChildLeft(v)]) ? 
 				    ChildRight(v) : ChildLeft(v);
-            		if ( lt(x, heap[child]) ) break;
+            		if ( compare(x, heap[child]) ) break;
 			else {
 				heap[v] = heap[child];
 				pos[heap[v]] = v;
@@ -49,7 +53,10 @@ class Heap {
     	}
 
 public:
-    	void setComp( Compare c ) { lt = c; }
+    	void initialize( const double *s ) {
+		activity = s;
+	}
+
     	int empty() { 
 		if ( heap.size() == 0 ) return 1;
        		else return 0;
@@ -101,18 +108,6 @@ public:
 };
 
 
-// Function for soting activities
-struct GreaterActivity { 
-    	const double *activity;     
-    	int operator() ( int a, int b ) { 
-		if ( activity[a] > activity[b] ) return 1; 
-		else return 0;
-	}
-    	GreaterActivity(): activity(NULL) {}
-    	GreaterActivity( const double *s ): activity(s) {}
-};
-
-
 // Solver
 class Solver {
 public:
@@ -145,7 +140,7 @@ public:
 
     	double *activity;                               // The variables' score for VSIDS
     	double var_inc;                                 // Parameter for VSIDS     
-    	Heap<GreaterActivity> vsids;                    // Heap to select variable
+    	Heap vsids;					// Heap to select variable
      
     	void alloc_memory();                                      // Allocate memory 
     	void assign( int literal, int level, int cref );          // Assigned a variable

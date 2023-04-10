@@ -109,9 +109,8 @@ void heap_initialize( Heap *h, const double *a ) {
 	h->posSize = 0;
 }
 
-int heap_compare( Heap *h, int a, int b ) {
-	if ( h->activity[a] > h->activity[b] ) return 1; 
-	else return 0;
+bool heap_compare( Heap *h, int a, int b ) {
+	return h->activity[a] > h->activity[b]; 
 }
 
 void heap_up( Heap *h, int v ) {
@@ -143,14 +142,12 @@ void heap_down( Heap *h, int v ) {
 	h->pos[x] = v;
 }
 
-int heap_empty( Heap *h ) { 
-	if ( h->heapSize == 0 ) return 1;
-	else return 0;
+bool heap_empty( Heap *h ) { 
+	return h->heapSize == 0;
 }
 
-int heap_inHeap( Heap *h, int n ) { 
-	if ( (n < h->posSize) && (h->pos[n] >= 0) ) return 1;
-	else return 0;	
+bool heap_inHeap( Heap *h, int n ) { 
+	return n < h->posSize && h->pos[n] >= 0;
 }
 
 void heap_update( Heap *h, int x ) { heap_up(h, h->pos[x]); }

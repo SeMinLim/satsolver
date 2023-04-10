@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <vector>
 
 #define ChildLeft(x) (x << 1 | 1)
@@ -16,10 +17,7 @@ class Heap {
     	std::vector<int> heap; // Index of activity[x]
     	std::vector<int> pos; // Actual position of heap
 
-	int compare( int a, int b ) {
-		if ( activity[a] > activity[b] ) return 1;
-		else return 0;
-	}
+	bool compare( int a, int b ) const { return activity[a] > activity[b]; }
 
     	void up( int v ) {
         	int x = heap[v];
@@ -57,15 +55,11 @@ public:
 		activity = s;
 	}
 
-    	int empty() { 
-		if ( heap.size() == 0 ) return 1;
-       		else return 0;
-	}
-    	int inHeap( int n ) { 
-		if ( (n < (int)pos.size()) && (pos[n] >= 0) ) return 1;
-       		else return 0;	
-	}
-    	void update( int x ) { up(pos[x]); }
+    	bool empty() const { return heap.size() == 0; }
+
+    	bool inHeap( int n ) const { return n < (int)pos.size() && pos[n] >= 0; }
+    	
+	void update( int x ) { up(pos[x]); }
 
     	void insert( int x ) {
         	if ( (int)pos.size() < x + 1 ) pos.resize(x + 1, -1);	

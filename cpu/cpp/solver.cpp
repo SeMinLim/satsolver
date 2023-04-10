@@ -17,11 +17,11 @@ char *read_until_new_line( char *p ) {
 }
 
 char *read_int( char *p, int *i ) {
-        int sym = 1;
+        bool sym = true;
         *i = 0;
         p = read_whitespace(p);
         if ( *p == '-' ) {
-                sym = 0;
+                sym = false;
                 ++p;
         }
         while ( *p >= '0' && *p <= '9' ) {

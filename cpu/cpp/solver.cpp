@@ -454,7 +454,8 @@ int Solver::solve() {
 			}
 		}
 		else if ( reduces >= reduce_limit ) reduce();
-		else if ( (lbd_queue_size == 50) && (0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) restart();
+		// We proposed a new simple heuristic for restarting scheme
+		else if ( (lbd_queue_size == 50) && (fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) restart();
 		else if ( conflicts >= rephase_limit ) rephase();
 		else res = decide();
 	}

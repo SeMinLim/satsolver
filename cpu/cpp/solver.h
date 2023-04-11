@@ -148,10 +148,10 @@ public:
 	void initialize();                                        // Allocate memory and initialize the values 
     	void assign( int literal, int level, int cref );          // Assign true value to a certain literal
 	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database
-    	int  parse( char *filename );                             // Read CNF file
-    	int  decide();                                            // Pick decision variable based on VSIDS
 	int  propagate();                                         // BCP (Boolean Contraint Propagation)
-    	void update_score( int var, double mult );                // Update activity
+    	int  parse( char *filename );                             // Read CNF file
+	int  decide();                                            // Pick decision variable based on VSIDS
+	void update_score( int var, double mult );                // Update activity
     	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analysis
 	void backtrack( int backtrack_level );                    // Backtracking
     	void restart();                                           // Do restart

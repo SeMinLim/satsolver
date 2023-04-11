@@ -289,6 +289,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		int resolve_lit = 0;
 		int index = trail.size() - 1;
 
+		// Store variables in a certain clause temporarily
 		std::vector<int> bump;
 		do {
 			// First UIP learning method
@@ -297,6 +298,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < (int)c.literals.size(); i++ ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
+					// Update score (step 1)
 					update_score(var, 0.5);
 					bump.push_back(var);
 					mark[var] = time_stamp;
@@ -339,6 +341,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 		if ( lbd_queue_pos == 50 ) lbd_queue_pos = 0;
 		slow_lbd_sum += (lbd > 50 ? 50 : lbd);
 			
+		// Decide backtrack level
 		if ( learnt.size() == 1 ) backtrackLevel = 0;
 		else {
 			int max_id = 1;
@@ -351,6 +354,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 			backtrackLevel = level[abs(p)];
 		}
 
+		// Update score (step 2)
 		for ( int i = 0; i < (int)bump.size(); i++ ) {   
 			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 1);
 		}
@@ -358,14 +362,17 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	return 0;
 }
 
+// Backtraking
 void Solver::backtrack( int backtrackLevel ) {
     	if ( (int)decVarInTrail.size() <= backtrackLevel ) return;
 	else {
 		for ( int i = trail.size() - 1; i >= decVarInTrail[backtrackLevel]; i-- ) {
 			int v = abs(trail[i]);
 			value[v] = 0;
-			saved[v] = trail[i] > 0 ? 1 : -1; // Phase saving
-			if ( !vsids.inHeap(v) ) vsids.insert(v); // Update heap
+			// Phase saving
+			saved[v] = trail[i] > 0 ? 1 : -1;
+			// Store variable back to VSIDS heap
+			if ( !vsids.inHeap(v) ) vsids.insert(v);
 		}
 		propagated = decVarInTrail[backtrackLevel];
 		trail.resize(propagated);
@@ -373,13 +380,16 @@ void Solver::backtrack( int backtrackLevel ) {
 	}
 }
 
+// Do restart
 void Solver::restart() {
     	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = 0;
     	backtrack(decVarInTrail.size());
 	restarts++;
 }
 
+// Do rephase
 void Solver::rephase() {
+	// This rephase style is fully based on CaDiCaL
 	if ( (rephases / 2) == 1 ) for ( int i = 1; i <= vars; i++ ) saved[i] = local_best[i];
 	else for ( int i = 1; i <= vars; i++ ) saved[i] = -local_best[i];
 	backtrack(decVarInTrail.size());
@@ -388,25 +398,36 @@ void Solver::rephase() {
 	rephases++;
 }
 
+// Do reduce
 void Solver::reduce() {
+	// Go back to the first decision level first
     	backtrack(0);
+
     	reduces = 0;
 	reduce_limit += 512;
-    	int new_size = origin_clauses;
+    	
+	int new_size = origin_clauses;
 	int old_size = clauseDB.size();
-    	reduceMap.resize(old_size);
+    	
+	reduceMap.resize(old_size);
+	
 	// Random delete 50% bad clauses (LBD>=5) 
 	// Reducing based on Literal Block Distances
     	for ( int i = origin_clauses; i < old_size; i++ ) { 
-        	if ( clauseDB[i].lbd >= 5 && rand() % 2 == 0 ) reduceMap[i] = -1; // remove clause
+        	if ( clauseDB[i].lbd >= 5 && rand() % 2 == 0 ) reduceMap[i] = -1;
         	else {
             		if ( new_size != i ) clauseDB[new_size] = clauseDB[i];
             		reduceMap[i] = new_size++;
         	}
     	}
+
+	// Resize the clause database
     	clauseDB.resize(new_size, Clause(0));
-    	for ( int v = -vars; v <= vars; v++ ) { // Update Watched Pointers
+    	
+	// Update the array of watched literals
+	for ( int v = -vars; v <= vars; v++ ) {
         	if ( v == 0 ) continue;
+
         	int old_sz = WatchedLiterals(v).size();
 		int new_sz = 0;
 
@@ -423,27 +444,43 @@ void Solver::reduce() {
     	}
 }
 
+// Solver
 int Solver::solve() {
     	int res = 0;
     	while (!res) {
-		int cref = propagate(); // Boolean Constraint Propagation (BCP)
+		int cref = propagate();
+		
 		// Find a conflict
 		if ( cref != -1 ) {
 			int backtrackLevel = 0; 
 			int lbd = 0;
-			res = analyze(cref, backtrackLevel, lbd); // Conflict analyze
 			
-			if ( res == 20 ) break; // Find a conflict in 0 decision level
-			else {
-				backtrack(backtrackLevel); // backtracking
+			res = analyze(cref, backtrackLevel, lbd);
+			
+			if ( res == 20 ) {
+				// Find a conflict in 0 decision level
+				// UNSAT
+				break;
+			} else {
+				backtrack(backtrackLevel);
 				
-				if ( learnt.size() == 1 ) assign(learnt[0], 0, -1); // Learnt a unit clause
-				else {
-					int cref = add_clause(learnt); // Add a clause to data base.
+				if ( learnt.size() == 1 ) {
+					// Learnt a clause (unit)
+					// No need to add to clause database
+					// Directly assigning!
+					assign(learnt[0], 0, -1);
+				} else {
+					// Learnt a clause (not unit)
+					// Add a clause to clause database
+					int cref = add_clause(learnt);
 					clauseDB[cref].lbd = lbd;
-					assign(learnt[0], backtrackLevel, cref); // The learnt clause implies the assignment of the UIP variable.
+					// The learnt clause implies the assignment of the UIP variable
+					assign(learnt[0], backtrackLevel, cref); 
 				}
-				var_inc *= (1 / 0.8); // var_decay for locality
+
+				// var_decay for locality
+				var_inc *= (1 / 0.8);
+
 				++conflicts, ++reduces;
 				
 				// Update the local-best phase
@@ -452,16 +489,19 @@ int Solver::solve() {
 					for ( int i = 1; i < vars + 1; i++ ) local_best[i] = value[i];
 				}
 			}
-		}
-		else if ( reduces >= reduce_limit ) reduce();
-		// We proposed a new simple heuristic for restarting scheme
-		else if ( (lbd_queue_size == 50) && (fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts) ) restart();
-		else if ( conflicts >= rephase_limit ) rephase();
-		else res = decide();
+		} else if ( reduces >= reduce_limit ) {
+			reduce();
+		} else if ( lbd_queue_size == 50 && fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts ) {
+			// We proposed a new simple heuristic for restarting scheme
+			restart();
+		} else if ( conflicts >= rephase_limit ) {
+			rephase();
+		} else res = decide();
 	}
 	return res;
 }
 
+// Print model when the result is SAT
 void Solver::printModel() {
     	for ( int i = 1; i <= vars; i++ ) printf("%d ", value[i] * i);
     	printf( "0\n" );

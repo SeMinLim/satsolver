@@ -46,7 +46,7 @@ void Solver::initialize() {
     	mark = new int[vars + 1];
     	local_best = new int[vars + 1];
     	saved = new int[vars + 1];
-    	activity = new double[vars + 1];
+    	activity = new uint64_t[vars + 1];
     	watched_literals = new std::vector<WL>[vars * 2 + 1]; // Two polarities
     	
 	conflicts = decides = propagations = 0;
@@ -54,7 +54,7 @@ void Solver::initialize() {
     	threshold = propagated = time_stamp = 0;
 	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
 
-    	var_inc = 1;
+    	//var_inc = 1;
 	rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192; // Heuristics
 
 	vsids.initialize(activity);
@@ -253,12 +253,15 @@ int Solver::decide() {
 }
 
 // Update activity
-void Solver::update_score( int var, double coeff ) {
-	// Update score and prevent float overflow
-    	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
-        	for ( int i = 1; i <= vars; i++ ) activity[i] *= 1e-100;
-        	var_inc *= 1e-100;
-	}
+void Solver::update_score( int var, uint64_t amount ) {
+	// Update score and prevent overflow
+	// Integer type bumping scheme
+	if ( activity[var] + amount > 18446744073709551515U ) {
+		for ( int i = 1; i < vars; i ++ ) {
+			activity[i] /= 2;
+		}
+		activity[var] += amount/2;
+	} else activity[var] += amount;
 	// Update Heap
     	if ( vsids.inHeap(var) ) vsids.update(var);
 }
@@ -299,7 +302,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
 					// Update score (step 1)
-					update_score(var, 0.5);
+					update_score(var, 2);
 					bump.push_back(var);
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
@@ -356,7 +359,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 
 		// Update score (step 2)
 		for ( int i = 0; i < (int)bump.size(); i++ ) {   
-			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 1);
+			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 4);
 		}
 	}
     	return 0;
@@ -408,7 +411,7 @@ void Solver::reduce() {
     	
 	int new_size = origin_clauses;
 	int old_size = clauseDB.size();
-    	
+
 	reduceMap.resize(old_size);
 	
 	// Random delete 50% bad clauses (LBD>=5) 
@@ -479,7 +482,7 @@ int Solver::solve() {
 				}
 
 				// var_decay for locality
-				var_inc *= (1 / 0.8);
+				for ( int i = 1; i <= vars; i ++ ) if ( activity[i] != 0 ) activity[i] -= 1;
 
 				++conflicts, ++reduces;
 				

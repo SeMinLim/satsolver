@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <vector>
@@ -13,7 +14,7 @@
 
 // Heap data structure (max heap)
 class Heap {
-    	const double *activity; // Pointer to activity database
+    	const uint64_t *activity; // Pointer to activity database
     	std::vector<int> heap; // Index of activity[x]
     	std::vector<int> pos; // Actual position of heap
 
@@ -52,7 +53,7 @@ class Heap {
     	}
 
 public:
-    	void initialize( const double *s ) {
+    	void initialize( const uint64_t *s ) {
 		activity = s;
 	}
 
@@ -141,8 +142,7 @@ public:
             *local_best,                                // A phase with a local deepest trail                     
             *saved;                                     // Phase saving
 
-    	double *activity;                               // The variables' score for VSIDS
-    	double var_inc;                                 // Parameter for VSIDS     
+    	uint64_t *activity;				// The variables' score for VSIDS
     	Heap vsids;					// Heap to select variable
 
 	void initialize();                                        // Allocate memory and initialize the values 
@@ -151,7 +151,7 @@ public:
 	int  propagate();                                         // BCP (Boolean Contraint Propagation)
     	int  parse( char *filename );                             // Read CNF file
 	int  decide();                                            // Pick decision variable based on VSIDS
-	void update_score( int var, double mult );                // Update activity
+	void update_score( int var, uint64_t amount );		  // Update activity
     	int  analyze( int cref, int &backtrack_level, int &lbd ); // Conflict analysis
 	void backtrack( int backtrack_level );                    // Backtracking
     	void restart();                                           // Do restart

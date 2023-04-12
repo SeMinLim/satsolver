@@ -43,7 +43,7 @@ int main( int argc, char **argv ) {
 
                 res = S.solve();
                 if ( res == 10 ) {
-                         printf("s SATISFIABLE\n");
+			printf("s SATISFIABLE\n");
                         S.printModel();
                 }
                 else if ( res == 20 ) printf("s UNSATISFIABLE\n");
@@ -52,7 +52,7 @@ int main( int argc, char **argv ) {
                 double processTimeFinishREAL = timeCheckerREAL();
 
                 double timeProcessCPU = processTimeFinishCPU - processTimeInitCPU;
-                double timeProcessREAL = processTimeFinishREAL - processTimeInitREAL;
+		double timeProcessREAL = processTimeFinishREAL - processTimeInitREAL;
 
                 printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
                 printf( "Elapsed Time (REAL): %.2f\n", timeProcessREAL );

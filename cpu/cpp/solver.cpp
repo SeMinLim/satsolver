@@ -103,9 +103,9 @@ int Solver::propagate() {
         	// Take an array of '-p'
 		std::vector<WL> &ws = WatchedLiterals(p);
 		// Check all clauses that contains '-p'
-		int size = ws.size();
-		int i, j;
-		for ( i = j = 0; i < size;  ) {
+		int num_clauses = ws.size();
+		int j = 0;
+		for ( int i = 0; i < num_clauses;  ) {
 			// To make the BCP progess fast
 			// Check whether a clause is already satisfied via blocker
 			// If then, move to the next clause that has '-p'
@@ -153,7 +153,7 @@ int Solver::propagate() {
 				// This means all literals are false
 				// including c[0] and '-p'
                 		if ( Value(firstWP) == -1 ) { 
-                    			while ( i < size ) ws[j++] = ws[i++];
+                    			while ( i < num_clauses ) ws[j++] = ws[i++];
 					// Shrink
                     			ws.resize(j);
 					// Return the index of clause

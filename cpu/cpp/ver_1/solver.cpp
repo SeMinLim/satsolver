@@ -2,6 +2,13 @@
 
 
 // Etc
+// Elapsed time checker
+static inline double timeCheckerCPU(void) {
+        struct rusage ru;
+        getrusage(RUSAGE_SELF, &ru);
+        return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
+}
+
 // Additional funcs for reading CNF file
 char *read_whitespace( char *p ) {
         // ASCII
@@ -448,56 +455,70 @@ void Solver::reduce() {
 // Solver
 int Solver::solve() {
     	int res = 0;
-    	while (!res) {
-		int cref = propagate();
+	double processStart = timeCheckerCPU();
+    	
+	while (!res) {
+		double processFinish = timeCheckerCPU();
+		double processTime = processFinish - processStart;
+
+		if ( processTime < 200 ) {
+			int cref = propagate();
 		
-		// Find a conflict
-		if ( cref != -1 ) {
-			int backtrackLevel = 0; 
-			int lbd = 0;
-			
-			res = analyze(cref, backtrackLevel, lbd);
-			
-			if ( res == 20 ) {
-				// Find a conflict in 0 decision level
-				// UNSAT
-				break;
-			} else {
-				backtrack(backtrackLevel);
+			// Find a conflict
+			if ( cref != -1 ) {
+				int backtrackLevel = 0; 
+				int lbd = 0;
 				
-				if ( learnt.size() == 1 ) {
-					// Learnt a clause (unit)
-					// No need to add to clause database
-					// Directly assigning!
-					assign(learnt[0], 0, -1);
+				res = analyze(cref, backtrackLevel, lbd);
+			
+				if ( res == 20 ) {
+					// Find a conflict in 0 decision level
+					// UNSAT
+					break;
 				} else {
-					// Learnt a clause (not unit)
-					// Add a clause to clause database
-					int cref = add_clause(learnt);
-					clauseDB[cref].lbd = lbd;
-					// The learnt clause implies the assignment of the UIP variable
-					assign(learnt[0], backtrackLevel, cref); 
-				}
-
-				// var_decay for locality
-				var_inc *= (1 / 0.8);
-
-				++conflicts, ++reduces;
+					backtrack(backtrackLevel);
 				
-				// Update the local-best phase
-				if ( (int)trail.size() > threshold ) {
-					threshold = trail.size();
-					for ( int i = 1; i < vars + 1; i++ ) local_best[i] = value[i];
+					if ( learnt.size() == 1 ) {
+						// Learnt a clause (unit)
+						// No need to add to clause database
+						// Directly assigning!
+						assign(learnt[0], 0, -1);
+					} else {
+						// Learnt a clause (not unit)
+						// Add a clause to clause database
+						int cref = add_clause(learnt);
+						clauseDB[cref].lbd = lbd;
+						// The learnt clause implies the assignment of the UIP variable
+						assign(learnt[0], backtrackLevel, cref); 
+					}
+
+					// var_decay for locality
+					var_inc *= (1 / 0.8);
+
+					++conflicts, ++reduces;
+				
+					// Update the local-best phase
+					if ( (int)trail.size() > threshold ) {
+						threshold = trail.size();
+						for ( int i = 1; i < vars + 1; i++ ) local_best[i] = value[i];
+					}
 				}
-			}
-		} else if ( reduces >= reduce_limit ) {
-			reduce();
-		} else if ( lbd_queue_size == 50 && 0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts ) {
-			restart();
-		} else if ( conflicts >= rephase_limit ) {
-			rephase();
-		} else res = decide();
+			} else if ( reduces >= reduce_limit ) {
+				reduce();
+			} else if ( lbd_queue_size == 50 && 0.8*fast_lbd_sum/lbd_queue_size > slow_lbd_sum/conflicts ) {
+				restart();
+			} else if ( conflicts >= rephase_limit ) {
+				rephase();
+			} else res = decide();
+		} else res = 30;
 	}
+
+	if ( res == 10 || res == 20 ) {
+		double processFinal = timeCheckerCPU();
+		double processTimeFinal = processFinal - processStart;
+		printf( "Elapsed Time (CPU): %.2f\n", processTimeFinal );
+	}
+
 	return res;
 }
 

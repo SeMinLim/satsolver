@@ -1,13 +1,14 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
 
-#define Value(literal) (literal > 0 ? s->value[literal] : -s->value[-literal])
-#define WatchedPointers(id) (watchedPointers[s->vars + id])
-#define WatchedPointersSize(id) (watchedPointersSize[s->vars + id])
+#define Value(literal) (literal > 0 ? value[literal] : -value[-literal])
+#define WatchedLiterals(id) (watched_literals[s->vars + id])
+#define WatchedLiteralsSize(id) (watched_literals_size[s->vars + id])
 
 // Benchmark 7
 #define NumVars 99
@@ -15,12 +16,12 @@
 #define MaxNumLits 3
 
 
-// Heap data structure
+// Heap data structure (max heap)
 typedef struct Heap {
-	const double *activity;
-	int heap[NumVars+1];
+	const double *activity; // Pointer to activity database
+	int heap[NumVars+1]; // Index of activity array
 	int heapSize;
-	int pos[NumVars+1];
+	int pos[NumVars+1]; // Actual position of heap
 	int posSize;
 } Heap;
 void heap_initialize( Heap *h, const double *a );
@@ -34,20 +35,23 @@ void heap_insert( Heap *h, int x );
 int heap_pop( Heap *h );
 
 		
-// Clauses
+// Clause
 typedef struct Clause {
+	// Literal Block Distance based on Glucose
+	// LBD = How many decision variable in a learnt clause
     	int lbd;
-    	int literals[64];
+    	int literals[64]; // Literals in a clause
 	int literalsSize;
 } Clause;
 void clause_init( Clause *c );
-void clause_resize( Clause *c, int sz );
+void clause_resize( Clause *c, int sz ); // Init LBD as 0 and resize literal array
 
 
-// The watched literals data structure (lazy data structure)
+// Watcher list
 typedef struct WL {
-    	int clauseIdx;
-    	int blocker;
+	// Which clause a watched literal is included
+    	int clauseIdx; // A index of a clause in ClauseDB
+    	int blocker; // A flag for check whether a clause is already satisfied
 } WL;
 void wl_init( WL *w );
 void wl_set( WL *w, int c, int b );
@@ -55,35 +59,22 @@ void wl_set( WL *w, int c, int b );
 
 // Solver
 typedef struct Solver {
-	int trail[NumVars];
-	int trailSize;
-	int decVarInTrail[NumVars/2];
-	int decVarInTrailSize;
+	int origin_clauses;				// # of origin clauses
+	int vars, clauses, conflicts;			// # of variables, clauses, and conflicts
+	int decides, propagations;			// # of decides and propagations
+	int backtracklevel, lbd;			// Parameters for backtracking
+    	int restarts;					// Parameter for restart
+	int reduces, reduce_limit;			// Parameters for reduce
+	int rephases, rephase_inc, rephase_limit;	// Parameters for rephase
+    	int threshold;					// A threshold to update local-best phase
+    	int propagated;					// # of propagated literals in trail
+	int time_stamp;					// Parameter for conflict analysis
 
-	int vars, clauses, origin_clauses, conflicts;	
-	int decides, propagations;
-	int backtracklevel, lbd;
-    	int restarts, rephases, reduces;
-    	int rephase_inc, rephase_limit, reduce_limit;
-    	int threshold;
-    	int propagated;
-	int time_stamp;
-   
-    	int lbd_queue[50],
-            lbd_queue_size,
-            lbd_queue_pos;
-    	double fast_lbd_sum, slow_lbd_sum;
-
-	int value[NumVars+1];
-	int reason[NumVars+1];
-	int level[NumVars+1];
-	int mark[NumVars+1];
-	int local_best[NumVars+1];
-	int saved[NumVars+1];
-
-	double activity[NumVars+1];
-    	double var_inc;
-    	Heap vsids; 
+    	int lbd_queue[50],  	// Circles queue saving the recent 50 LBDs
+            lbd_queue_size, 	// The number of LBDs in this queue
+            lbd_queue_pos;  	// The position to save the next LBD
+    	int fast_lbd_sum,	// Sum of the global LBDs 
+	    slow_lbd_sum;	// Sum of the recent 50 LBDs
 } Solver;
 void solver_init( Solver *s );
 void solver_assign( Solver *s, int literal, int level, int cref );

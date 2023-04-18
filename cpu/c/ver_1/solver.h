@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdbool.h>
 
 #define ChildLeft(x) (x << 1 | 1)
@@ -90,6 +91,6 @@ int  solver_solve( Solver *s );
 
 
 // Etc
-unsigned int rand_generator();
+uint16_t rand_generator();
 int abs_value( int n );
 void *mem_cpy( Clause *dest, Clause *src );

@@ -100,11 +100,12 @@ Heap vsids;				// Heap to select variable
 
 // Etc
 // rand() in stdlib
-unsigned short int lfsr = 0xACE1u;
-unsigned int bit;
-unsigned int rand_generator() {
-	bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
-	return lfsr =  (lfsr >> 1) | (bit << 15);
+uint16_t lfsr = 0xACE1u;
+uint16_t rand_generator() {
+	uint32_t bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
+	lfsr =  (lfsr >> 1) | (bit << 15);
+	uint16_t value = lfsr << 15;
+	return value;
 }
 
 // abs() in stdlib
@@ -363,7 +364,10 @@ int solver_decide( Solver *s ) {
     	}
 	decVarInTrail[decVarInTrailSize++] = trailSize;
 	
-	if ( saved[next] ) next *= saved[next];
+	if ( saved[next] ) {
+		if ( saved[next] < 0 ) next = -next;
+		else if ( saved[next] > 0 ) next = next;
+	}
 	solver_assign(s, next, decVarInTrailSize, -1);
     	
 	s->decides++;
@@ -490,10 +494,10 @@ void solver_restart( Solver *s ) {
 
 // Do rephase
 void solver_rephase( Solver *s ) {
-	if ( (s->rephases / 2) == 1 ) for ( int i = 1; i <= s->vars; i++ ) saved[i] = local_best[i];
+	if ( (s->rephases >> 1) == 1 ) for ( int i = 1; i <= s->vars; i++ ) saved[i] = local_best[i];
 	else for ( int i = 1; i <= s->vars; i++ ) saved[i] = -local_best[i];
 	solver_backtrack(s, decVarInTrailSize);
-	s->rephase_inc *= 2;
+	s->rephase_inc <<= 1;
 	s->rephase_limit = s->conflicts + s->rephase_inc;
 	s->rephases++;
 }
@@ -511,7 +515,7 @@ void solver_reduce( Solver *s ) {
 	reduceMapSize = old_size;
 
     	for ( int i = s->origin_clauses; i < old_size; i++ ) { 
-        	if ( clauseDB[i].lbd >= 5 && rand_generator() % 2 == 0 ) reduceMap[i] = -1;
+        	if ( clauseDB[i].lbd >= 5 && rand_generator() == 0 ) reduceMap[i] = -1;
         	else {
             		if ( new_size != i ) {
 				mem_cpy(&clauseDB[new_size], &clauseDB[i]);
@@ -590,4 +594,3 @@ int solver_solve( Solver *s ) {
 	}
 	return res;
 }
-

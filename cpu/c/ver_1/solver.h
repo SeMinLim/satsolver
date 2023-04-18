@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
 
 #define ChildLeft(x) (x << 1 | 1)
@@ -78,17 +76,17 @@ typedef struct Solver {
 } Solver;
 void solver_init( Solver *s );
 void solver_assign( Solver *s, int literal, int level, int cref );
-int  solver_propagate( Solver *s );
-void solver_backtrack( Solver *s, int backtrack_level );
-int  solver_analyze( Solver *s, int cref );
-int  solver_parse( Solver *s );
-int  solver_solve( Solver *s );
-int  solver_decide( Solver *s );
 int  solver_add_clause( Solver *s, int c[], int size );
-void solver_bump_var( Solver *s, int var, double mult );
+int  solver_propagate( Solver *s );
+int  solver_parse( Solver *s );
+int  solver_decide( Solver *s );
+void solver_update_score( Solver *s, int var, double coeff );
+int  solver_analyze( Solver *s, int cref );
+void solver_backtrack( Solver *s, int backtrack_level );
 void solver_restart( Solver *s );
 void solver_reduce( Solver *s );
 void solver_rephase( Solver *s );
+int  solver_solve( Solver *s );
 
 
 // Etc

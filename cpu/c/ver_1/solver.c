@@ -94,12 +94,12 @@ int local_best[NumVars+1] = {0,};	// A phase with a local deepest trail
 int saved[NumVars+1] = {0,};		// Phase saving
 
 double activity[NumVars+1] = {0,};	// The variables' score for VSIDS
-double var_inc;				// Parameter for VSIDS
-
+double var_inc = 1;			// Parameter for VSIDS
 Heap vsids;				// Heap to select variable
 
 
 // Etc
+// rand() in stdlib
 unsigned short int lfsr = 0xACE1u;
 unsigned int bit;
 unsigned int rand_generator() {
@@ -107,10 +107,12 @@ unsigned int rand_generator() {
 	return lfsr =  (lfsr >> 1) | (bit << 15);
 }
 
+// abs() in stdlib
 int abs_value( int n ){
 	return (n + (n >> 31)) ^ (n >> 31);
 }
 
+// memcpy in stdlib
 void *mem_cpy( Clause *dest, Clause *src ) {
 	dest->lbd = src->lbd;
 	for ( int i = 0; i < 64; i ++ ) dest->literals[i] = src->literals[i];
@@ -118,7 +120,7 @@ void *mem_cpy( Clause *dest, Clause *src ) {
 }
 
 
-// Heap data structure
+// Heap data structure (max heap)
 void heap_initialize( Heap *h, const double *a ) {
 	h->activity = a;
 	h->heapSize = 0;
@@ -228,6 +230,30 @@ void wl_set( WL *w, int c, int b ) {
 
 
 // Solver
+// Initialize the values
+void solver_init( Solver *s ) {
+	s->backtracklevel = s->lbd = 0;
+
+	s->conflicts = s->decides = s->propagations = s->restarts = s->rephases = s->reduces = 0;
+	s->threshold = s->propagated = s->time_stamp = 0;
+    	s->fast_lbd_sum = s->lbd_queue_size = s->lbd_queue_pos = s->slow_lbd_sum = 0;
+    	
+	s->rephase_inc = 1e5, s->rephase_limit = 1e5, s->reduce_limit = 8192;
+
+	heap_initialize(&vsids, activity);
+    	for (int i = 1; i <= s->vars; i++) heap_insert(&vsids, i);
+}
+
+// Assign true value to a certain literal
+void solver_assign( Solver *s, int literal, int l, int cref ) {
+    	int var = abs_value(literal);
+    	value[var]  = literal > 0 ? 1 : -1;
+    	level[var]  = l;
+	reason[var] = cref;
+	trail[trailSize++] = literal;
+}
+
+// Add a clause to the database
 int solver_add_clause( Solver *s, int c[], int size ) {
 	Clause cls;
 	clause_init(&cls);
@@ -246,83 +272,40 @@ int solver_add_clause( Solver *s, int c[], int size ) {
 	return id;                                                      
 }
 
-int solver_parse( Solver *s ) {
-	int buffer[3];
-	int bufferSize = 0;
-	s->vars = NumVars;
-	s->clauses = NumClauses;
-	solver_init(s);
-	for ( int i = 0; i < NumClauses; i ++) {
-		for ( int j = 0; j < MaxNumLits; j ++ ) {
-			buffer[j] = benchmark[i][j];
-		}
-		solver_add_clause(s, buffer, 3);
-	}
-
-    	s->origin_clauses = clauseDBSize;
-    	return ( solver_propagate(s) == -1 ? 0 : 20 );             
-}
-
-void solver_init( Solver *s ) {
-	s->backtracklevel = s->lbd = 0;
-
-	s->conflicts = s->decides = s->propagations = s->restarts = s->rephases = s->reduces = 0;
-	s->threshold = s->propagated = s->time_stamp = 0;
-    	s->fast_lbd_sum = s->lbd_queue_size = s->lbd_queue_pos = s->slow_lbd_sum = 0;
-    	
-	var_inc = 1, s->rephase_inc = 1e5, s->rephase_limit = 1e5, s->reduce_limit = 8192;
-
-	heap_initialize(&vsids, activity);
-    	for (int i = 1; i <= s->vars; i++) heap_insert(&vsids, i);
-}
-
-void solver_assign( Solver *s, int literal, int l, int cref ) {
-    	int var = abs_value(literal);
-    	value[var]  = literal > 0 ? 1 : -1;
-    	level[var]  = l;
-	reason[var] = cref;
-	trail[trailSize++] = literal;
-}
-
-int solver_decide( Solver *s ) {      
-    	int next = -1;
-	while ( next == -1 || Value(next) != 0 ) {
-        	if (heap_empty(&vsids)) return 10;
-        	else next = heap_pop(&vsids);
-    	}
-	decVarInTrail[decVarInTrailSize++] = trailSize;
-	if ( saved[next] ) next *= saved[next];
-    	solver_assign(s, next, decVarInTrailSize, -1);
-    	s->decides++;
-	return 0;
-}
-
+// BCP (Boolean Constraint Propagation)
 int solver_propagate( Solver *s ) {
     	while ( s->propagated < trailSize ) { 
         	int p = trail[s->propagated++];
-		int size = WatchedLiteralsSize(p);
-        	int i, j;                     
-        	for ( i = j = 0; i < size;  ) {
-            		int blocker = WatchedLiterals(p)[i].blocker;                       
+		
+		WL *ws = WatchedLiterals(p);
+		int num_clauses = WatchedLiteralsSize(p);
+        	
+		int new_num_clauses = 0;                     
+        	for ( int i = 0; i < num_clauses;  ) {
+            		int blocker = ws[i].blocker;                       
 			if ( Value(blocker) == 1 ) {                
-                		WatchedLiterals(p)[j++] = WatchedLiterals(p)[i++]; 
+                		ws[new_num_clauses++] = ws[i++]; 
 				continue;
             		}
-			int cref = WatchedLiterals(p)[i].clauseIdx;
+
+			int cref = ws[i].clauseIdx;
 			int falseLiteral = -p;
             		Clause *c = &clauseDB[cref];              
             		if ( c->literals[0] == falseLiteral ) {
 				c->literals[0] = c->literals[1];
 				c->literals[1] = falseLiteral;
 			}
+			
 			i++;
+			
 			int firstWP = c->literals[0];
 			WL w;
 		       	wl_set(&w, cref, firstWP);
 			if ( Value(firstWP) == 1 ) {                   
-                		WatchedLiterals(p)[j++] = w; 
+                		ws[new_num_clauses++] = w; 
 				continue;
             		}
+			
 			int k;
 			int sz = c->literalsSize;
             		for ( k = 2; (k < sz) && (Value(c->literals[k]) == -1); k++ ); 
@@ -331,10 +314,10 @@ int solver_propagate( Solver *s ) {
 				c->literals[k] = falseLiteral;
 				WatchedLiterals(-c->literals[1])[WatchedLiteralsSize(-c->literals[1])++] = w;
 			} else { 
-				WatchedLiterals(p)[j++] = w;
+				ws[new_num_clauses++] = w;
                 		if ( Value(firstWP) == -1 ) { 
-                    			while ( i < size ) WatchedLiterals(p)[j++] = WatchedLiterals(p)[i++];
-					WatchedLiteralsSize(p) = j;
+                    			while ( i < num_clauses ) ws[new_num_clauses++] = ws[i++];
+					WatchedLiteralsSize(p) = new_num_clauses;
                     			return cref;
                 		} else {
 					solver_assign(s, firstWP, level[abs_value(p)], cref);
@@ -342,20 +325,63 @@ int solver_propagate( Solver *s ) {
 				}
 			}
             	}
-		// Shrink
-		WatchedLiteralsSize(p) = j;
+		WatchedLiteralsSize(p) = new_num_clauses;
     	}
     	return -1;                                       
 }
 
-void solver_bump_var( Solver *s, int var, double coeff ) {
-    	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
-        	for ( int i = 1; i <= s->vars; i++ ) activity[i] *= 1e-100;
-        	var_inc *= 1e-100;
+// Transfer data to ClauseDB
+int solver_parse( Solver *s ) {
+	int buffer[3];
+	int bufferSize = 0;
+	
+	s->vars = NumVars;
+	s->clauses = NumClauses;
+	solver_init(s);
+	
+	for ( int i = 0; i < NumClauses; i ++) {
+		for ( int j = 0; j < MaxNumLits; j ++ ) {
+			buffer[j] = benchmark[i][j];
+			bufferSize++;
+		}
+		solver_add_clause(s, buffer, bufferSize);
+		bufferSize = 0;
+	}
+
+    	s->origin_clauses = clauseDBSize;
+    	
+	return ( solver_propagate(s) == -1 ? 0 : 20 );             
+}
+
+// Pick deicison variable based on VSIDS
+int solver_decide( Solver *s ) {      
+    	int next = -1;
+
+	while ( next == -1 || Value(next) != 0 ) {
+        	if (heap_empty(&vsids)) return 10;
+        	else next = heap_pop(&vsids);
+    	}
+	decVarInTrail[decVarInTrailSize++] = trailSize;
+	
+	if ( saved[next] ) next *= saved[next];
+	solver_assign(s, next, decVarInTrailSize, -1);
+    	
+	s->decides++;
+	return 0;
+}
+
+// Update activity
+void solver_update_score( Solver *s, int var, double coeff ) {
+    	// Update score and prevent overflow
+	// Double type bumping scheme
+	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
+		for ( int i = 1; i <= s->vars; i ++ ) activity[i] *= 1e-100;
+		var_inc *= 1e-100;
 	}
     	if ( heap_inHeap(&vsids, var) ) heap_update(&vsids, var);
 }
 
+// Conflict analysis
 int solver_analyze( Solver *s, int conflict ) {
     	++s->time_stamp;
     	learntSize = 0;
@@ -365,23 +391,27 @@ int solver_analyze( Solver *s, int conflict ) {
     	if ( conflictLevel == 0 ) return 20;
 	else {
 		learnt[learntSize++] = 0;
-		int bump[128];
+		
+		int bump[512];
 		int bumpSize = 0;
+		
 		int should_visit_ct = 0; 
 		int resolve_lit = 0;
+		
 		int index = trailSize - 1;
 		do {
 			Clause *c = &clauseDB[conflict];
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c->literalsSize; i++ ) {
 				int var = abs_value(c->literals[i]);
 				if ( mark[var] != s->time_stamp && level[var] > 0 ) {
-					solver_bump_var(s, var, 0.5);
+					solver_update_score(s, var, 0.5);
 					bump[bumpSize++] = var;
 					mark[var] = s->time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
 					else learnt[learntSize++] = c->literals[i];
 				}
 			}
+			
 			do {
 				while ( mark[abs_value(trail[index--])] != s->time_stamp );
 				resolve_lit = trail[index + 1];
@@ -426,12 +456,14 @@ int solver_analyze( Solver *s, int conflict ) {
 		}
 
 		for ( int i = 0; i < bumpSize; i++ ) {   
-			if ( level[bump[i]] >= s->backtracklevel - 1 ) solver_bump_var(s, bump[i], 1);
+			if ( level[bump[i]] >= s->backtracklevel - 1 ) solver_update_score(s, bump[i], 1);
 		}
 	}
+
     	return 0;
 }
 
+// Backtracking
 void solver_backtrack( Solver *s, int backtrackLevel ) {
     	if ( decVarInTrailSize <= backtrackLevel ) return;
 	else {
@@ -443,20 +475,20 @@ void solver_backtrack( Solver *s, int backtrackLevel ) {
 		}
 		s->propagated = decVarInTrail[backtrackLevel];
 		
-		for ( int i = trailSize; i < s->propagated; i -- ) trail[i] = -1;
 		trailSize = s->propagated;
 		
-		for ( int i = decVarInTrailSize; i < backtrackLevel; i -- ) decVarInTrail[i] = -1;
 		decVarInTrailSize = backtrackLevel;
 	}
 }
 
+// Do restart
 void solver_restart( Solver *s ) {
     	s->fast_lbd_sum = s->lbd_queue_size = s->lbd_queue_pos = 0;
     	solver_backtrack(s, decVarInTrailSize);
 	s->restarts++;
 }
 
+// Do rephase
 void solver_rephase( Solver *s ) {
 	if ( (s->rephases / 2) == 1 ) for ( int i = 1; i <= s->vars; i++ ) saved[i] = local_best[i];
 	else for ( int i = 1; i <= s->vars; i++ ) saved[i] = -local_best[i];
@@ -466,20 +498,17 @@ void solver_rephase( Solver *s ) {
 	s->rephases++;
 }
 
+// Do reduce
 void solver_reduce( Solver *s ) {
     	solver_backtrack(s, 0);
-    	s->reduces = 0;
+    	
+	s->reduces = 0;
 	s->reduce_limit += 512;
-    	int new_size = s->origin_clauses;
+    	
+	int new_size = s->origin_clauses;
 	int old_size = clauseDBSize;
 
-	if ( old_size > reduceMapSize ) {
-		for ( int i = reduceMapSize; i < old_size; i ++ ) reduceMap[i] = -1;
-		reduceMapSize = old_size;
-	} else {
-		for ( int i = reduceMapSize; i < old_size; i -- ) reduceMap[i] = -1;
-		reduceMapSize = old_size;
-	}
+	reduceMapSize = old_size;
 
     	for ( int i = s->origin_clauses; i < old_size; i++ ) { 
         	if ( clauseDB[i].lbd >= 5 && rand_generator() % 2 == 0 ) reduceMap[i] = -1;
@@ -490,33 +519,27 @@ void solver_reduce( Solver *s ) {
             		reduceMap[i] = new_size++;
         	}
     	}
-
-	if ( new_size > clauseDBSize ) {
-		for ( int i = clauseDBSize; i < new_size; i ++ ) {
-			Clause cls_1;
-			clause_resize(&cls_1, 0);
-			mem_cpy(&clauseDB[i], &cls_1);
-		}
-	} else {
-		for ( int i = clauseDBSize; i < new_size; i -- ) {
-			Clause cls_2;
-			clause_resize(&cls_2, 0);
-			mem_cpy(&clauseDB[i], &cls_2);
-		}
-	}
+	
+	for ( int i = clauseDBSize; i < new_size; i -- ) {
+		Clause cls_2;
+		clause_resize(&cls_2, 0);
+		mem_cpy(&clauseDB[i], &cls_2);
+	}	
 	clauseDBSize = new_size;
 
 	for ( int v = -s->vars; v <= s->vars; v++ ) {
         	if ( v == 0 ) continue;
-        	int old_sz = WatchedLiteralsSize(v);
+        
+		int old_sz = WatchedLiteralsSize(v);
 		int new_sz = 0;
 
+		WL *ws = WatchedLiterals(v);
         	for ( int i = 0; i < old_sz; i++ ) {
-            		int old_idx = WatchedLiterals(v)[i].clauseIdx;
+            		int old_idx = ws[i].clauseIdx;
             		int new_idx = old_idx < s->origin_clauses ? old_idx : reduceMap[old_idx];
             		if ( new_idx != -1 ) {
-                		WatchedLiterals(v)[i].clauseIdx = new_idx;
-                		if (new_sz != i) WatchedLiterals(v)[new_sz] = WatchedLiterals(v)[i];
+                		ws[i].clauseIdx = new_idx;
+                		if (new_sz != i) ws[new_sz] = ws[i];
                 		new_sz++;
             		}
         	}
@@ -524,6 +547,7 @@ void solver_reduce( Solver *s ) {
     	}
 }
 
+// Solver
 int solver_solve( Solver *s ) {
     	int res = 0;
     	while (!res) {
@@ -544,7 +568,10 @@ int solver_solve( Solver *s ) {
 					clauseDB[cref].lbd = s->lbd;
 					solver_assign(s, learnt[0], s->backtracklevel, cref);
 				}
+	
+				// var_decay for locality
 				var_inc *= (1 / 0.8);
+
 				++s->conflicts, ++s->reduces;
 				
 				if ( trailSize > s->threshold ) {
@@ -552,12 +579,14 @@ int solver_solve( Solver *s ) {
 					for ( int i = 1; i < s->vars + 1; i++ ) local_best[i] = value[i];
 				}
 			}
-		}
-		else if ( s->reduces >= s->reduce_limit ) solver_reduce(s);
-		else if ( (s->lbd_queue_size == 50) && 
-			  (s->fast_lbd_sum/s->lbd_queue_size > s->slow_lbd_sum/s->conflicts) ) solver_restart(s);
-		else if ( s->conflicts >= s->rephase_limit ) solver_rephase(s);
-		else res = solver_decide(s);
+		} else if ( s->reduces >= s->reduce_limit ) {
+			solver_reduce(s);
+		} else if ( s->lbd_queue_size == 50 && 
+			    s->fast_lbd_sum/s->lbd_queue_size > s->slow_lbd_sum/s->conflicts ) {
+			solver_restart(s);
+		} else if ( s->conflicts >= s->rephase_limit ) {
+			solver_rephase(s);
+		} else res = solver_decide(s);
 	}
 	return res;
 }

@@ -1,6 +1,6 @@
 MEMORY
 {
-    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 32M /* 32 MB */
+    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 8192M /* 128 MB */
 }
 SECTIONS
 {
@@ -8,16 +8,25 @@ SECTIONS
     .text : {
         *(.text)
     } > ram
-    .data : ALIGN(0x1000) {
+    .data : {
         *(.data)
+    } > ram
+    .sdata : {
+	*(.sdata)
     } > ram
     .srodata : {
         *(.srodata)
+    } > ram
+    .rodata : {
+	*(.rodata)
     } > ram
     .riscv.attributes : {
 	*(.riscv.attributes)
     } > ram
     .bss : {
         *(.bss)
+    } > ram
+    .sbss : {
+	*(.sbss)
     } > ram
 }

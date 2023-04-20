@@ -17,13 +17,13 @@
 
 // Heap data structure (max heap)
 typedef struct Heap {
-	const uint64_t *activity; // Pointer to activity database
+	const double *activity; // Pointer to activity database
 	int heap[NumVars+1]; // Index of activity array
 	int heapSize;
 	int pos[NumVars+1]; // Actual position of heap
 	int posSize;
 } Heap;
-void heap_initialize( Heap *h, const uint64_t *a );
+void heap_initialize( Heap *h, const double *a );
 bool heap_compare( Heap *h, int a, int b );
 void heap_up( Heap *h, int v );
 void heap_down( Heap *h, int v );
@@ -81,9 +81,9 @@ int  solver_add_clause( Solver *s, int c[], int size );
 int  solver_propagate( Solver *s );
 int  solver_parse( Solver *s );
 int  solver_decide( Solver *s );
-void solver_update_score( Solver *s, int var, uint64_t amount );
-void solver_backtrack( Solver *s, int backtrack_level );
+void solver_update_score( Solver *s, int var, double coeff );
 int  solver_analyze( Solver *s, int cref );
+void solver_backtrack( Solver *s, int backtrack_level );
 void solver_restart( Solver *s );
 void solver_reduce( Solver *s );
 void solver_rephase( Solver *s );

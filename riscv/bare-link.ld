@@ -8,11 +8,8 @@ SECTIONS
     .text : {
         *(.text)
     } > ram
-    .sdata : ALIGN(0x20000000) {
+    .sdata : ALIGN(0x4000) {
 	*(.sdata)
-    } > ram
-    .srodata : {
-        *(.srodata)
     } > ram
     .rodata : {
 	*(.rodata)

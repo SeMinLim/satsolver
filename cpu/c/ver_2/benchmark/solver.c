@@ -2,7 +2,7 @@
 
 
 // Benchmark
-const int benchmark[][3] = {
+int benchmark[264][3] = {
 	{14, 1, -74},{-38, -58, 46},{48, -67, 49},{2, -20, -85},
 	{81, 64, -46},{72, 80, 12},{53, 78, 11},{-97, -43, 33},
 	{89, -66, -53},{-92, -55, -27},{5, 87, -81},{48, 93, 8},
@@ -73,17 +73,17 @@ const int benchmark[][3] = {
 
 
 // Global variables
-int learnt[1024];				// The index of the learnt clauses
+int learnt[512];				// The index of the learnt clauses
 int learntSize = 0;				//
 int trail[NumVars];				// Save the assigned literal sequence
 int trailSize = 0;				// (phase saving)
 int decVarInTrail[NumVars/2];			// Save the decision variables' position
 int decVarInTrailSize = 0;			// in trail (phase saving)
-int reduceMap[128*1024];				// Data structure for reduce
+int reduceMap[128*1024];			// Data structure for reduce
 int reduceMapSize = 0;				//
-Clause clauseDB[1024*1024];			// Clause database
+Clause clauseDB[128*1024];			// Clause database
 int clauseDBSize = 0;
-WL watched_literals[NumVars*2+1][64*1024];	// A mapping from a literal to clauses
+WL watched_literals[NumVars*2+1][32*1024];	// A mapping from a literal to clauses
 int watched_literals_size[NumVars*2+1] = {0,};	//
 	
 int value[NumVars+1] = {0,};		// The variable assignment (1:True;-1:False;0:Undefine)
@@ -93,8 +93,8 @@ int mark[NumVars+1] = {0,};		// Parameter for conflict analysis
 int local_best[NumVars+1] = {0,};	// A phase with a local deepest trail
 int saved[NumVars+1] = {0,};		// Phase saving
 
-uint64_t activity[NumVars+1] = {0,};	// The variables' score for VSIDS
-Heap vsids;				// Heap to select variable
+uint64_t activity[NumVars+1] = {(uint64_t)0U,};	// The variables' score for VSIDS
+Heap vsids;					// Heap to select variable
 
 
 // Etc
@@ -113,10 +113,11 @@ int abs_value( int n ){
 }
 
 // memcpy in stdlib
-void *mem_cpy( Clause *dest, Clause *src ) {
+void *mem_cpy( Clause *dest, const Clause *src ) {
 	dest->lbd = src->lbd;
 	for ( int i = 0; i < 64; i ++ ) dest->literals[i] = src->literals[i];
 	dest->literalsSize = src->literalsSize;
+	return dest;
 }
 
 
@@ -349,8 +350,8 @@ int solver_parse( Solver *s ) {
 	}
 
     	s->origin_clauses = clauseDBSize;
-    	
-	return ( solver_propagate(s) == -1 ? 0 : 20 );             
+
+	return ( solver_propagate(s) == -1 ? 0 : 20 );
 }
 
 // Pick deicison variable based on VSIDS
@@ -377,7 +378,7 @@ int solver_decide( Solver *s ) {
 void solver_update_score( Solver *s, int var, uint64_t amount ) {
     	// Update score and prevent overflow
 	// Integer type bumping scheme
-	if ( activity[var] + amount > 18446744073709551515U ) {
+	if ( activity[var] + amount > (uint64_t)18446744073709551515U ) {
 		for ( int i = 1; i <= s->vars; i ++ ) {
 			activity[i] >>= 1;
 		}
@@ -397,7 +398,7 @@ int solver_analyze( Solver *s, int conflict ) {
 	else {
 		learnt[learntSize++] = 0;
 		
-		int bump[1024];
+		int bump[128];
 		int bumpSize = 0;
 		
 		int should_visit_ct = 0; 
@@ -409,7 +410,7 @@ int solver_analyze( Solver *s, int conflict ) {
 			for ( int i = (resolve_lit == 0 ? 0 : 1); i < c->literalsSize; i++ ) {
 				int var = abs_value(c->literals[i]);
 				if ( mark[var] != s->time_stamp && level[var] > 0 ) {
-					solver_update_score(s, var, 2);
+					solver_update_score(s, var, (uint64_t)2U);
 					bump[bumpSize++] = var;
 					mark[var] = s->time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
@@ -461,7 +462,7 @@ int solver_analyze( Solver *s, int conflict ) {
 		}
 
 		for ( int i = 0; i < bumpSize; i++ ) {   
-			if ( level[bump[i]] >= s->backtracklevel - 1 ) solver_update_score(s, bump[i], 4);
+			if ( level[bump[i]] >= s->backtracklevel - 1 ) solver_update_score(s, bump[i], (uint64_t)4U);
 		}
 	}
     	return 0;
@@ -573,7 +574,7 @@ int solver_solve( Solver *s ) {
 					solver_assign(s, learnt[0], s->backtracklevel, cref);
 				}
 				// var_decay for locality
-				for ( int i = 1; i <= s->vars; i ++ ) if ( activity[i] != 0 ) activity[i] -= 1;
+				for ( int i = 1; i <= s->vars; i ++ ) if ( activity[i] != 0 ) activity[i] -= (uint64_t)1U;
 
 				++s->conflicts, ++s->reduces;
 				

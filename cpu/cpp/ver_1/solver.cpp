@@ -461,7 +461,7 @@ int Solver::solve() {
 		double processFinish = timeCheckerCPU();
 		double processTime = processFinish - processStart;
 
-		if ( processTime < 200 ) {
+		if ( processTime < 300 ) {
 			int cref = propagate();
 		
 			// Find a conflict

@@ -1,6 +1,6 @@
 MEMORY
 {
-    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 8192M /* 8GB */
+    ram (rwx) : ORIGIN = 0x00000000, LENGTH = 0xffffffff /* 4GB */
 }
 SECTIONS
 {
@@ -8,14 +8,8 @@ SECTIONS
     .text : {
         *(.text)
     } > ram
-    .data : {
-        *(.data)
-    } > ram
-    .sdata : {
+    .sdata : ALIGN(0x4000) {
 	*(.sdata)
-    } > ram
-    .srodata : {
-        *(.srodata)
     } > ram
     .rodata : {
 	*(.rodata)

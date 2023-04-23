@@ -93,4 +93,4 @@ int  solver_solve( Solver *s );
 // Etc
 uint16_t rand_generator();
 int abs_value( int n );
-void *mem_cpy( Clause *dest, Clause *src );
+void *mem_cpy( Clause *dest, const Clause *src );

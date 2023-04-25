@@ -10,7 +10,7 @@ static inline double timeCheckerCPU(void) {
 }
 
 // Additional funcs for reading CNF file
-char *read_whitespace( char *p ) {
+uint8_t *read_whitespace( uint8_t *p ) {
         // ASCII
         // Horizontal tab, line feed or new line,
 	// vertical tab, form feed or new page, 
@@ -19,14 +19,14 @@ char *read_whitespace( char *p ) {
         return p;
 }
 
-char *read_until_new_line( char *p ) {
+uint8_t *read_until_new_line( uint8_t *p ) {
         while ( *p != '\n' ) {
                 if ( *p++ == '\0' ) exit(1);
         }
         return ++p;
 }
 
-char *read_int( char *p, int *i ) {
+uint8_t *read_int( uint8_t *p, int *i ) {
         bool sym = true;
         *i = 0;
         p = read_whitespace(p);
@@ -53,7 +53,7 @@ void Solver::initialize() {
     	mark = new int[vars + 1];
     	local_best = new int[vars + 1];
     	saved = new int[vars + 1];
-    	activity = new double[vars + 1];
+    	activity = new uint64_t[vars + 1];
     	watched_literals = new std::vector<WL>[vars * 2 + 1]; // Two polarities
     	
 	conflicts = decides = propagations = 0;
@@ -61,7 +61,6 @@ void Solver::initialize() {
     	threshold = propagated = time_stamp = 0;
 	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
 
-    	var_inc = 1;
 	rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192; // Heuristics
 
 	vsids.initialize(activity);
@@ -190,9 +189,9 @@ int Solver::parse( char *filename ) {
 
 	// Then read the file
 	fseek(f_data, 0, SEEK_SET);
-	char *data = new char[file_len + 1];
-	char *p = data;
-	fread(data, sizeof(char), file_len, f_data);
+	uint8_t *data = new uint8_t[file_len + 1];
+	uint8_t *p = data;
+	fread(data, sizeof(uint8_t), file_len, f_data);
 	fclose(f_data);                                             
 	data[file_len] = '\0';
 
@@ -260,13 +259,15 @@ int Solver::decide() {
 }
 
 // Update activity
-void Solver::update_score( int var, double coeff ) {
+void Solver::update_score( int var, uint64_t amount ) {
 	// Update score and prevent overflow
-	// Double type bumping scheme
-	if ( (activity[var] += var_inc * coeff) > 1e100 ) {
-		for ( int i = 1; i <= vars; i ++ ) activity[i] *= 1e-100;
-		var_inc *= 1e-100;
-	}
+	// Integer type bumping scheme
+	if ( activity[var] + amount > 18446744073709551515U ) {
+		for ( int i = 1; i <= vars; i ++ ) {
+			activity[i] /= 2;
+		}
+		activity[var] += amount/2;
+	} else activity[var] += amount;
 	// Update Heap
     	if ( vsids.inHeap(var) ) vsids.update(var);
 }
@@ -307,7 +308,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 				int var = abs(c[i]);
 				if ( mark[var] != time_stamp && level[var] > 0 ) {
 					// Update score (step 1)
-					update_score(var, 0.5);
+					update_score(var, 2);
 					bump.push_back(var);
 					mark[var] = time_stamp;
 					if ( level[var] >= conflictLevel ) should_visit_ct++;
@@ -364,7 +365,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
 
 		// Update score (step 2)
 		for ( int i = 0; i < (int)bump.size(); i++ ) {   
-			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 1);
+			if ( level[bump[i]] >= backtrackLevel - 1 ) update_score(bump[i], 4);
 		}
 	}
     	return 0;
@@ -461,7 +462,7 @@ int Solver::solve() {
 		double processFinish = timeCheckerCPU();
 		double processTime = processFinish - processStart;
 
-		if ( processTime < 200 ) {
+		if ( processTime < 300 ) {
 			int cref = propagate();
 		
 			// Find a conflict
@@ -493,7 +494,7 @@ int Solver::solve() {
 					}
 
 					// var_decay for locality
-					var_inc *= (1 / 0.8);
+					for ( int i = 1; i <= vars; i ++ ) if ( activity[i] != 0 ) activity[i] -= 1;
 
 					++conflicts, ++reduces;
 				

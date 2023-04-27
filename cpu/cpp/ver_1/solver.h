@@ -167,6 +167,6 @@ public:
 
 // Etc
 // Additional funcs for reading CNF file
-char *read_whitespace( char *p );
-char *read_until_new_line( char *p );
-char *read_int( char *p, int *i );
+uint8_t *read_whitespace( uint8_t *p );
+uint8_t *read_until_new_line( uint8_t *p );
+uint8_t *read_int( uint8_t *p, int *i );

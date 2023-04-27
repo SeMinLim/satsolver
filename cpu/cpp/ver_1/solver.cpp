@@ -10,7 +10,7 @@ static inline double timeCheckerCPU(void) {
 }
 
 // Additional funcs for reading CNF file
-char *read_whitespace( char *p ) {
+uint8_t *read_whitespace( uint8_t *p ) {
         // ASCII
         // Horizontal tab, line feed or new line,
 	// vertical tab, form feed or new page, 
@@ -19,14 +19,14 @@ char *read_whitespace( char *p ) {
         return p;
 }
 
-char *read_until_new_line( char *p ) {
+uint8_t *read_until_new_line( uint8_t *p ) {
         while ( *p != '\n' ) {
                 if ( *p++ == '\0' ) exit(1);
         }
         return ++p;
 }
 
-char *read_int( char *p, int *i ) {
+uint8_t *read_int( uint8_t *p, int *i ) {
         bool sym = true;
         *i = 0;
         p = read_whitespace(p);
@@ -191,9 +191,9 @@ int Solver::parse( char *filename ) {
 
 	// Then read the file
 	fseek(f_data, 0, SEEK_SET);
-	char *data = new char[file_len + 1];
-	char *p = data;
-	fread(data, sizeof(char), file_len, f_data);
+	uint8_t *data = new uint8_t[file_len + 1];
+	uint8_t *p = data;
+	fread(data, sizeof(uint8_t), file_len, f_data);
 	fclose(f_data);                                             
 	data[file_len] = '\0';
 

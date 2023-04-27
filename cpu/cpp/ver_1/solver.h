@@ -129,22 +129,23 @@ public:
     	int rephase_inc, rephase_limit, reduce_limit;   // Parameters for rephase and reduce
     	int threshold;                                  // A threshold for updating the local_best phase
     	int propagated;                                 // The number of propagted literals in trail
-    	int time_stamp;                                 // Parameter for conflict analyzation and LBD calculation   
+    	int time_stamp;                                 // Parameter for conflict analyzation and LBD calculation
    
     	int lbd_queue[50],                              // Circled queue saved the recent 50 LBDs
             lbd_queue_size,                             // The number of LBDs in this queue
             lbd_queue_pos;                              // The position to save the next LBD
     	double fast_lbd_sum, slow_lbd_sum;		// Sum of the global and recent 50 LBDs
 
-    	int *value,                                     // The variable assignement (1:True; -1:False; 0:Undefine) 
-            *reason,                                    // The index of the clause that implies the variable assignment
+    	int8_t *value,					// The variable assignement (1:True; -1:False; 0:Undefine)
+	       *local_best,				// A phase with a local deepest trail
+	       *saved;					// Phase saving
+        int *reason,                                    // The index of the clause that implies the variable assignment
             *level,                                     // The decision level of a variable      
-            *mark,                                      // Parameter for conflict analyzation
-            *local_best,                                // A phase with a local deepest trail                     
-            *saved;                                     // Phase saving
+            *mark;                                      // Parameter for conflict analyzation
 
     	double *activity;				// The variables' score for VSIDS
 	double var_inc;					// Parameter for VSIDS
+	double var_decay;				// Parameter for VSIDS
     	Heap vsids;					// Heap to select variable
 
 	void initialize();                                        // Allocate memory and initialize the values 

@@ -47,12 +47,12 @@ char *read_int( char *p, int *i ) {
 // Solver
 // Allocate memory and initialize the values
 void Solver::initialize() {
-    	value  = new int[vars + 1];
-    	reason = new int[vars + 1];
+    	value  = new int8_t[vars + 1];
+    	local_best = new int8_t[vars + 1];
+	saved = new int8_t[vars + 1];
+	reason = new int[vars + 1];
     	level = new int[vars + 1];
     	mark = new int[vars + 1];
-    	local_best = new int[vars + 1];
-    	saved = new int[vars + 1];
     	activity = new double[vars + 1];
     	watched_literals = new std::vector<WL>[vars * 2 + 1]; // Two polarities
     	
@@ -62,6 +62,7 @@ void Solver::initialize() {
 	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
 
     	var_inc = 1;
+	var_decay = 0.8;
 	rephase_inc = 1e5, rephase_limit = 1e5, reduce_limit = 8192; // Heuristics
 
 	vsids.initialize(activity);
@@ -370,7 +371,7 @@ int Solver::analyze( int conflict, int &backtrackLevel, int &lbd ) {
     	return 0;
 }
 
-// Backtraking
+// Backtracking
 void Solver::backtrack( int backtrackLevel ) {
     	if ( (int)decVarInTrail.size() <= backtrackLevel ) return;
 	else {
@@ -398,7 +399,7 @@ void Solver::restart() {
 // Do rephase
 void Solver::rephase() {
 	// This rephase style is fully based on CaDiCaL
-	if ( (rephases / 2) == 1 ) for ( int i = 1; i <= vars; i++ ) saved[i] = local_best[i];
+	if ( rephases/2 == 1 ) for ( int i = 1; i <= vars; i++ ) saved[i] = local_best[i];
 	else for ( int i = 1; i <= vars; i++ ) saved[i] = -local_best[i];
 	backtrack(decVarInTrail.size());
 	rephase_inc *= 2;
@@ -461,7 +462,7 @@ int Solver::solve() {
 		double processFinish = timeCheckerCPU();
 		double processTime = processFinish - processStart;
 
-		if ( processTime < 300 ) {
+		if ( processTime < 160 ) {
 			int cref = propagate();
 		
 			// Find a conflict
@@ -493,10 +494,10 @@ int Solver::solve() {
 					}
 
 					// var_decay for locality
-					var_inc *= (1 / 0.8);
+					var_inc *= (1 / var_decay);
 
 					++conflicts, ++reduces;
-				
+					
 					// Update the local-best phase
 					if ( (int)trail.size() > threshold ) {
 						threshold = trail.size();
@@ -509,7 +510,9 @@ int Solver::solve() {
 				restart();
 			} else if ( conflicts >= rephase_limit ) {
 				rephase();
-			} else res = decide();
+			} else {
+				res = decide();
+			}
 		} else res = 30;
 	}
 

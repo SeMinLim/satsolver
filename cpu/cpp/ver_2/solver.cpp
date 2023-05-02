@@ -47,12 +47,12 @@ uint8_t *read_int( uint8_t *p, int *i ) {
 // Solver
 // Allocate memory and initialize the values
 void Solver::initialize() {
-    	value  = new int[vars + 1];
+    	value  = new int8_t[vars + 1];
+	local_best = new int8_t[vars + 1];
+	saved = new int8_t[vars + 1];
     	reason = new int[vars + 1];
     	level = new int[vars + 1];
     	mark = new int[vars + 1];
-    	local_best = new int[vars + 1];
-    	saved = new int[vars + 1];
     	activity = new uint64_t[vars + 1];
     	watched_literals = new std::vector<WL>[vars * 2 + 1]; // Two polarities
     	
@@ -462,7 +462,7 @@ int Solver::solve() {
 		double processFinish = timeCheckerCPU();
 		double processTime = processFinish - processStart;
 
-		if ( processTime < 300 ) {
+		if ( processTime < 500 ) {
 			int cref = propagate();
 		
 			// Find a conflict

@@ -136,12 +136,12 @@ public:
             lbd_queue_pos;                              // The position to save the next LBD
     	int fast_lbd_sum, slow_lbd_sum;			// Sum of the global and recent 50 LBDs
 
-    	int *value,                                     // The variable assignement (1:True; -1:False; 0:Undefine) 
-            *reason,                                    // The index of the clause that implies the variable assignment
+	int8_t *value,					// The variable assignment (1:True; -1:False; 0:Undefine)
+	       *local_best,				// A pahse with a local deepest trail
+	       *saved;					// Phase saving
+        int *reason,                                    // The index of the clause that implies the variable assignment
             *level,                                     // The decision level of a variable      
-            *mark,                                      // Parameter for conflict analyzation
-            *local_best,                                // A phase with a local deepest trail                     
-            *saved;                                     // Phase saving
+            *mark;                                      // Parameter for conflict analyzation
 
     	uint64_t *activity;				// The variables' score for VSIDS
     	Heap vsids;					// Heap to select variable

@@ -9,9 +9,9 @@ OBJDUMPFLAGS=-d -Mno-aliases
 OBJDIR=./obj/
 
 
-all: $(wildcard *.c)
+all:
 	mkdir -p $(OBJDIR)
-	$(RISCV_TARGET)gcc $(CFLAGS) $(LDFLAGS) entry.s $(wildcard *.c) -o $(OBJDIR)/binary.elf
+	$(RISCV_TARGET)gcc $(CFLAGS) $(LDFLAGS) entry.s solver.c -o $(OBJDIR)/binary.elf
 	$(RISCV_TARGET)objdump $(OBJDUMPFLAGS) ./$(OBJDIR)/binary.elf > ./$(OBJDIR)/satsolver.dump
 	cd $(OBJDIR); bash ../strip.sh
 	mv $(OBJDIR)/binary.bin $(OBJDIR)/satsolver.bin

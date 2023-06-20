@@ -8,19 +8,22 @@ SECTIONS
     .text : {
         *(.text)
     } > ram
-    .sdata : ALIGN(0x4000) {
-	*(.sdata)
-    } > ram
-    .rodata : {
+    .rodata : ALIGN(0x4000){
 	*(.rodata)
     } > ram
-    .riscv.attributes : {
-	*(.riscv.attributes)
+    .sdata : {
+	*(.sdata)
+    } > ram
+    /*.srodata : {
+	*(.srodata)
+    } > ram*/ /* For printing output result*/
+    .sbss : {
+	*(.sbss)
     } > ram
     .bss : {
         *(.bss)
     } > ram
-    .sbss : {
-	*(.sbss)
+    .riscv.attributes : {
+	*(.riscv.attributes)
     } > ram
 }

@@ -86,12 +86,12 @@ int clauseDBSize = 0;
 WL watched_literals[NumVars*2+1][32*1024];	// A mapping from a literal to clauses
 int watched_literals_size[NumVars*2+1] = {0,};	//
 	
-int value[NumVars+1] = {0,};		// The variable assignment (1:True;-1:False;0:Undefine)
+int8_t value[NumVars+1] = {0,};		// The variable assignment (1:True;-1:False;0:Undefine)
+int8_t local_best[NumVars+1] = {0,};	// A phase with a local deepest trail
+int8_t saved[NumVars+1] = {0,};		// Phase saving
 int reason[NumVars+1] = {0,};		// The index of the clause that implies the variable assignment
 int level[NumVars+1] = {0,};		// The decision level of a variable
 int mark[NumVars+1] = {0,};		// Parameter for conflict analysis
-int local_best[NumVars+1] = {0,};	// A phase with a local deepest trail
-int saved[NumVars+1] = {0,};		// Phase saving
 
 uint64_t activity[NumVars+1] = {(uint64_t)0U,};	// The variables' score for VSIDS
 Heap vsids;					// Heap to select variable

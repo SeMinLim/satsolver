@@ -2,6 +2,23 @@
 
 
 // Etc
+// rand() in stdlib
+uint32_t lfsr32 = 0xACE8F;
+uint32_t lfsr31 = 0x23456789;
+uint32_t shift_lfsr( uint32_t *lfsr, uint32_t polynomial_mask ) {
+        uint32_t feedback = *lfsr & 1;
+        *lfsr >>= 1;
+        if ( feedback == 1 ) *lfsr ^= polynomial_mask;
+        return *lfsr;
+}
+uint32_t rand_generator() {
+        shift_lfsr(&lfsr32, POLY_MASK_32);
+        uint32_t tmp_1 = (shift_lfsr(&lfsr32, POLY_MASK_32) ^ shift_lfsr(&lfsr31, POLY_MASK_31)) & 0xffff;
+        uint32_t tmp_2 = tmp_1 << 31;
+        uint32_t value = tmp_2 >> 31;
+        return value;
+}
+
 // Elapsed time checker
 static inline double timeCheckerCPU(void) {
         struct rusage ru;
@@ -423,7 +440,7 @@ void Solver::reduce() {
 	// Random delete 50% bad clauses (LBD>=5) 
 	// Reducing based on Literal Block Distances
     	for ( int i = origin_clauses; i < old_size; i++ ) { 
-        	if ( clauseDB[i].lbd >= 5 && rand() % 2 == 0 ) reduceMap[i] = -1;
+        	if ( clauseDB[i].lbd >= 5 && rand_generator() == 0 ) reduceMap[i] = -1;
         	else {
             		if ( new_size != i ) clauseDB[new_size] = clauseDB[i];
             		reduceMap[i] = new_size++;
@@ -462,7 +479,7 @@ int Solver::solve() {
 		double processFinish = timeCheckerCPU();
 		double processTime = processFinish - processStart;
 
-		if ( processTime < 500 ) {
+		if ( processTime < 2000 ) {
 			int cref = propagate();
 		
 			// Find a conflict

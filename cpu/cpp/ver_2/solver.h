@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include <vector>
 
+#define POLY_MASK_32 0xB4BCD35C
+#define POLY_MASK_31 0x7A5BC2E3
+
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
@@ -164,6 +167,9 @@ public:
 
 
 // Etc
+// rand() in stdlib
+uint32_t shift_lfsr( uint32_t *lfsr, uint32_t polynomial_mask );
+uint32_t rand_generator();
 // Additional funcs for reading CNF file
 uint8_t *read_whitespace( uint8_t *p );
 uint8_t *read_until_new_line( uint8_t *p );

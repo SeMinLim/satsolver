@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define POLY_MASK_32 0xB4BCD35C
+#define POLY_MASK_31 0x7A5BC2E3
+
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
@@ -9,11 +12,13 @@
 #define WatchedLiterals(id) (watched_literals[s->vars + id])
 #define WatchedLiteralsSize(id) (watched_literals_size[s->vars + id])
 
-// Benchmark 7
-#define NumVars 99
-#define NumClauses 264
+// Benchmark
+//#define NumVars 50
+//#define NumClauses 218
+//#define MaxNumLits 3
+#define NumVars 3
+#define NumClauses 6
 #define MaxNumLits 3
-
 
 // Heap data structure (max heap)
 typedef struct Heap {
@@ -91,6 +96,7 @@ int  solver_solve( Solver *s );
 
 
 // Etc
-uint16_t rand_generator();
+uint32_t shift_lfsr( uint32_t *lfsr, uint32_t polynomial_mask );
+uint32_t rand_generator();
 int abs_value( int n );
 void *mem_cpy( Clause *dest, const Clause *src );

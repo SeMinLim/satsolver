@@ -12,13 +12,11 @@
 #define WatchedLiterals(id) (watched_literals[s->vars + id])
 #define WatchedLiteralsSize(id) (watched_literals_size[s->vars + id])
 
-// Benchmark
-//#define NumVars 50
-//#define NumClauses 218
-//#define MaxNumLits 3
-#define NumVars 3
-#define NumClauses 6
+// Simple Test
+#define NumVars 50
+#define NumClauses 218
 #define MaxNumLits 3
+
 
 // Heap data structure (max heap)
 typedef struct Heap {

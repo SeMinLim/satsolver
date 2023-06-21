@@ -2,7 +2,7 @@
 
 
 // Benchmark
-/*const int benchmark[218][3] = { 
+const int benchmark[218][3] = { 
 	{-48, -49, 21},{41, 37, -42},{-25, -22, 10},{-25, 26, -8},
 	{-20, 27, -4},{2, 9, 36},{-44, 47, 10},{-29, 28, -33},
 	{6, -36, 8},{3, -49, -38},{-43, -27, 8},{2, -42, 9},
@@ -57,10 +57,8 @@
 	{-8, 39, -42},{27, 3, -30},{43, -44, -27},{-8, 15, -5},
 	{-13, -36, -37},{35, 39, 26},{48, 5, 42},{-4, -9, 49},
 	{-33, -11, 39},{32, -10, -44},{-3, -22, -33},{-39, 42, 40},
-	{3, -5, 14} };*/
-const int benchmark[6][3] = {
-	{1, 2}, {1, -2}, {3, 2}, {-3, 1},
-	{1, 2, 3}, {-1, -2} };
+	{3, -5, 14} 
+};
 
 
 // Global variables
@@ -75,17 +73,17 @@ int reduceMapSize = 0;				//
 Clause clauseDB[128*1024];			// Clause database
 int clauseDBSize = 0;
 WL watched_literals[NumVars*2+1][32*1024];	// A mapping from a literal to clauses
-int watched_literals_size[NumVars*2+1] = {0,};	//
+int watched_literals_size[NumVars*2+1];		//
 	
-int8_t value[NumVars+1] = {0,};		// The variable assignment (1:True;-1:False;0:Undefine)
-int8_t local_best[NumVars+1] = {0,};	// A phase with a local deepest trail
-int8_t saved[NumVars+1] = {0,};		// Phase saving
-int reason[NumVars+1] = {0,};		// The index of the clause that implies the variable assignment
-int level[NumVars+1] = {0,};		// The decision level of a variable
-int mark[NumVars+1] = {0,};		// Parameter for conflict analysis
+int8_t value[NumVars+1];		// The variable assignment (1:True;-1:False;0:Undefine)
+int8_t local_best[NumVars+1];		// A phase with a local deepest trail
+int8_t saved[NumVars+1];		// Phase saving
+int reason[NumVars+1];			// The index of the clause that implies the variable assignment
+int level[NumVars+1];			// The decision level of a variable
+int mark[NumVars+1];			// Parameter for conflict analysis
 
-uint64_t activity[NumVars+1] = {(uint64_t)0U,};	// The variables' score for VSIDS
-Heap vsids;					// Heap to select variable
+uint64_t activity[NumVars+1];		// The variables' score for VSIDS
+Heap vsids;				// Heap to select variable
 
 
 // Etc
@@ -114,7 +112,7 @@ int abs_value( int n ){
 // memcpy in stdlib
 void *mem_cpy( Clause *dest, const Clause *src ) {
 	dest->lbd = src->lbd;
-	for ( int i = 0; i < 64; i ++ ) dest->literals[i] = src->literals[i];
+	for ( int i = 0; i < MaxNumLits; i ++ ) dest->literals[i] = src->literals[i];
 	dest->literalsSize = src->literalsSize;
 	return dest;
 }
@@ -197,6 +195,9 @@ int heap_pop( Heap *h ) {
 void clause_init( Clause *c ) { 
 	c->lbd = 0;
 	c->literalsSize = 0;
+	for ( int i = 0; i < MaxNumLits; i ++ ) {
+		c->literals[i] = 0;
+	}
 }
 	
 void clause_resize( Clause *c, int sz ) {
@@ -526,6 +527,7 @@ void solver_reduce( Solver *s ) {
 
 	for ( int i = clauseDBSize; i < new_size; i -- ) {
 		Clause cls_2;
+		clause_init(&cls_2);
 		clause_resize(&cls_2, 0);
 		mem_cpy(&clauseDB[i], &cls_2);
 	}	

@@ -82,7 +82,7 @@ void solver_init( Solver *s );
 void solver_assign( Solver *s, int literal, int level, int cref );
 int  solver_add_clause( Solver *s, int c[], int size );
 int  solver_propagate( Solver *s );
-int  solver_parse( Solver *s );
+void solver_parse( Solver *s );
 int  solver_decide( Solver *s );
 void solver_update_score( Solver *s, int var, uint64_t amount );
 void solver_backtrack( Solver *s, int backtrack_level );

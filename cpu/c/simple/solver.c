@@ -279,7 +279,7 @@ int solver_propagate( Solver *s ) {
 }
 
 // Transfer data to ClauseDB
-int solver_parse( Solver *s ) {
+void solver_parse( Solver *s ) {
 	int buffer[3];
 	int bufferSize = 0;
 	
@@ -297,8 +297,6 @@ int solver_parse( Solver *s ) {
 	}
 
     	s->origin_clauses = clauseDBSize;
-
-	return ( solver_propagate(s) == -1 ? 0 : 20 );
 }
 
 // Pick deicison variable based on VSIDS
@@ -502,6 +500,8 @@ void solver_reduce( Solver *s ) {
 
 // Solver
 int solver_solve( Solver *s ) {
+	solver_parse(s);
+
     	int res = 0;
     	while (!res) {
 		int cref = solver_propagate(s);

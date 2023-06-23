@@ -16,35 +16,22 @@ static inline double timeCheckerCPU(void) {
 int main() {
         Solver s;
 
-        double parseTimeInitCPU = timeCheckerCPU();
+        double processTimeInitCPU = timeCheckerCPU();
 
-        int res = solver_parse(&s);
+        int res = solver_solve(&s);
+        if ( res == 10 ) {
+		printf("SATISFIABLE\n");
+        } else if ( res == 20 ) printf("UNSATISFIABLE\n");
 
-        double parseTimeFinishCPU = timeCheckerCPU();
+        double processTimeFinishCPU = timeCheckerCPU();
+	
+	double timeProcessCPU = processTimeFinishCPU - processTimeInitCPU;
 
-        double timeParseCPU = parseTimeFinishCPU - parseTimeInitCPU;
+        printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
+        printf( "Conflicts: %d\n", s.conflicts );
+	printf( "Decisions: %d\n", s.decides );
+	printf( "Propagations: %d\n", s.propagations );
+	printf( "Evaluations: %d\n", s.propagations + s.decides );
 
-        printf( "Parsing Time (CPU): %.2f\n", timeParseCPU );
-
-        if ( res == 20 ) printf("UNSATISFIABLE\n");
-        else {
-                double processTimeInitCPU = timeCheckerCPU();
-
-                res = solver_solve(&s);
-                if ( res == 10 ) {
-			printf("SATISFIABLE\n");
-                }
-                else if ( res == 20 ) printf("UNSATISFIABLE\n");
-
-                double processTimeFinishCPU = timeCheckerCPU();
-
-                double timeProcessCPU = processTimeFinishCPU - processTimeInitCPU;
-
-                printf( "Elapsed Time (CPU): %.2f\n", timeProcessCPU );
-                printf( "Conflicts: %d\n", s.conflicts );
-		printf( "Decisions: %d\n", s.decides );
-		printf( "Propagations: %d\n", s.propagations );
-		printf( "Evaluations: %d\n", s.propagations + s.decides );
-        }
         return 0;
 }

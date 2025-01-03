@@ -8,7 +8,7 @@
 - Literal Block Distance Scoring Scheme [Based on Glucose]
 - Dynamic Search Restart [Based on Glucose]
 - Conflict-Driven Branching Heuristics
-  - VSIDS(Variable State Independent Decaying Sum) with Heap Data Structure
+  - VSIDS (Variable State Independent Decaying Sum) with Heap Data Structure (Max-Heap)
 - Clause Deletion Strategies
   - Reducing based on LBD
 - Rephasing [Based on CaDiCaL]

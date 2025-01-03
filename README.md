@@ -2,6 +2,8 @@
 
 - Conflict-Driven Clause Learning
   - First UIP (Unit Implication Point) Clause Learning [Based on Chaff]
+- Boolean Constraints Propagation
+  - Based on MiniSAT
   - Phase Saving (A component caching technique)
 - Lazy Data Structure
   - The Watched Literal [Based on Chaff]

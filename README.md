@@ -3,16 +3,16 @@
 - Conflict-Driven Clause Learning
   - First UIP (Unit Implication Point) Clause Learning [Based on Chaff]
 - Boolean Constraint Propagation [Based on MiniSAT]
+  - Lazy Data Structure (Two Watched Literals) [Based on Chaff]
+- Heuristics
   - Phase Saving (A component caching technique)
-- Lazy Data Structure
-  - The Watched Literal [Based on Chaff]
-- Literal Block Distance Scoring Scheme [Based on Glucose]
-- Dynamic Search Restart [Based on Glucose]
-- Conflict-Driven Branching Heuristics
-  - VSIDS (Variable State Independent Decaying Sum) with Heap Data Structure (Max-Heap) [Based on Chaff]
-- Clause Deletion Strategies
-  - Reducing based on LBD
-- Rephasing [Based on CaDiCaL]
+  - Literal Block Distance Scoring Scheme [Based on Glucose]
+  - Dynamic Search Restart [Based on Glucose]
+  - Conflict-Driven Branching Heuristics
+    - VSIDS (Variable State Independent Decaying Sum) with Heap Data Structure (Max-Heap) [Based on Chaff]
+  - Clause Deletion Strategies
+    - Reducing based on LBD
+  - Rephasing [Based on CaDiCaL]
 
 ------
 ### Mandatory Papers

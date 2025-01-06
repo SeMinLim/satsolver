@@ -1,9 +1,10 @@
 # SAT Solver
 
 - Conflict-Driven Clause Learning
-  - First UIP (Unit Implication Point) Clause Learning [Based on Chaff]
-- Boolean Constraint Propagation [Based on MiniSAT]
-  - Lazy Data Structure (Two Watched Literals) [Based on Chaff]
+  - First UIP (Unit Implication Point) clause learning [Based on Chaff]
+- Boolean Constraint Propagation
+  - Lazy data structure (two watched literals) [Based on Chaff]
+  - Two polarities, pinned position for watched literals, and blockers [Based on MiniSAT]
 - Heuristics
   - Phase Saving (A component caching technique)
   - Literal Block Distance Scoring Scheme [Based on Glucose]

@@ -5,12 +5,14 @@
 - Boolean Constraint Propagation
   - Lazy data structure (two watched literals) [Based on Chaff]
   - Two polarities, pinned position for watched literals, and blockers [Based on MiniSAT]
+- Variable Decision
+  - Conflict-Driven Branching Heuristics
+    - VSIDS (Variable State Independent Decaying Sum) with heap data structure (Max-Heap) [Based on Chaff]
+  - Progress Saving
+    - A lightweight component caching scheme [Based on Pipatsrisawat2007]  
 - Heuristics
-  - Phase Saving (A component caching technique)
   - Literal Block Distance Scoring Scheme [Based on Glucose]
   - Dynamic Search Restart [Based on Glucose]
-  - Conflict-Driven Branching Heuristics
-    - VSIDS (Variable State Independent Decaying Sum) with Heap Data Structure (Max-Heap) [Based on Chaff]
   - Clause Deletion Strategies
     - Reducing based on LBD
   - Rephasing [Based on CaDiCaL]

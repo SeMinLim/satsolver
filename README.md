@@ -14,7 +14,7 @@
   - Literal block distance scoring scheme [Based on Glucose]
 - Restart
   - Dynamic search restart [Based on Glucose]
-- Heuristics
+- Other Heuristics
   - Rephasing [Based on CaDiCaL]
 
 ------

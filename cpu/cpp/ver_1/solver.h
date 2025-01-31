@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <vector>
 
+
 #define ChildLeft(x) (x << 1 | 1)
 #define ChildRight(x) ((x + 1) << 1)
 #define Parent(x) ((x - 1) >> 1)
@@ -116,15 +117,16 @@ public:
 // Solver
 class Solver {
 public:
-    	std::vector<int> learnt,                        // The index of the learnt clauses
-                         trail,                         // Save the assigned literal sequence(phase saving)
-                         decVarInTrail,                 // Save the decision variables' position in trail(phase saving)
-                         reduceMap;                     // Data structure for reduce
+    	std::vector<int> learnt,			// The clause indices of the learnt clauses
+                         trail,				// Save the assigned literal sequence
+                         decVarInTrail,                 // Save the decision variables' position in trail
+                         reduceMap;                     // Auxiliary data structure for clause management
     	std::vector<Clause> clauseDB;                   // Clause database
     	std::vector<WL> *watched_literals;              // A mapping from literal to clauses
     	
 	int vars, clauses, origin_clauses, conflicts;   // The number of variables, clauses, and conflicts
-	int decides, propagations;			// The number of decides and propagations
+	int decides, unitPropagations;			// The number of decides and unit propagations
+	int bcpFunctionCalls;				// The number of BCP function calls
     	int restarts, rephases, reduces;                // Parameters for restart, rephase, and reduce
     	int rephase_inc, rephase_limit, reduce_limit;   // Parameters for rephase and reduce
     	int threshold;                                  // A threshold for updating the local_best phase
@@ -144,10 +146,12 @@ public:
             *mark;                                      // Parameter for conflict analyzation
 
     	double *activity;				// The variables' score for VSIDS
-	double var_inc;					// Parameter for VSIDS
-	double var_decay;				// Parameter for VSIDS
+	double var_inc, var_decay;			// Parameter for VSIDS
     	Heap vsids;					// Heap to select variable
 
+	double processTimeFinal;			// Total elapsed time
+	double propagaTimeFinal;			// Propagation elapsed time
+	
 	void initialize();                                        // Allocate memory and initialize the values 
     	void assign( int literal, int level, int cref );          // Assign true value to a certain literal
 	int  add_clause( std::vector<int> &c );                   // Add new clause to clause database

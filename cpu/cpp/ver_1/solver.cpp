@@ -69,7 +69,7 @@ void Solver::initialize( void ) {
 	restarts = rephases = reduces = 0;
     	threshold = propagated = time_stamp = 0;
 	fast_lbd_sum = lbd_queue_size = lbd_queue_pos = slow_lbd_sum = 0;
-	processTimeFinal = propagaTimeFinal = 0.00;
+	processTimeFinal = propagaTimeFinal = maxBCPTime = 0.00;
 
     	var_inc = 1;
 	var_decay = 0.8;
@@ -113,6 +113,7 @@ int Solver::add_clause( std::vector<int> &c ) {
 
 // BCP (Boolean Constraint Propagation)
 int Solver::propagate( void ) {
+	double bcpStart = timeCheckerCPU();
 	// This propagate style is fully based on MiniSAT
     	while ( propagated < (int)trail.size() ) { 
 		// 'p' is already assigned as 'true'
@@ -207,6 +208,11 @@ int Solver::propagate( void ) {
 	
 	// Parameter update
 	bcpFunctionCalls ++;
+
+	double bcpFinish = timeCheckerCPU();
+	double bcpTime = bcpFinish - bcpStart;
+	if ( bcpTime > maxBCPTime ) maxBCPTime = bcpTime;
+
     	return -1;                                       
 }
 
@@ -622,8 +628,10 @@ int Solver::solve() {
 	if ( res == 10 || res == 20 ) {
 		double processFinal = timeCheckerCPU();
 		processTimeFinal = processFinal - processStart;
-		printf( "Elapsed Time [Total] (CPU): %.2f\n", processTimeFinal );
-		//printf( "Elapsed Time [Propa] (CPU): %.2f\n", propagaTimeFinal );
+		printf( "Elapsed Time [Total] (CPU): %.4f\n", processTimeFinal );
+		//printf( "Elapsed Time [Propa] (CPU): %.4f\n", propagaTimeFinal );
+		printf( "Elapsed Time [MaxBCP] (CPU): %.4f\n", maxBCPTime );
+		printf( "----------------------------------------------------\n" );
 	}
 
 	return res;

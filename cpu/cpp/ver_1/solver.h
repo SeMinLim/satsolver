@@ -151,6 +151,7 @@ public:
 
 	double processTimeFinal;			// Total elapsed time
 	double propagaTimeFinal;			// Propagation elapsed time
+	double maxBCPTime;				// Maximum elapsed time of BCP
 	
 	void initialize();                                        // Allocate memory and initialize the values 
     	void assign( int literal, int level, int cref );          // Assign true value to a certain literal
